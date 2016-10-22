@@ -27,10 +27,17 @@ role Builder {
             $type-name;
         }
 
-        require-from @include, $class-name;
-        my $type = ::($class-name);
+        my $type = do try {
+            CATCH {
+                when X::NoSuchSymbol {
+                    require-from @include, $class-name;
+                    .resume;
+                }
+            }
+            ::($class-name);
+        }
 
-        $type.from-plan(:$context, |%plan);
+        $type.from-plan(:$context, |%config);
     }
 
     multi method build-from-plan(%config, :$section, :$type!, :$context!, :@include) {
@@ -95,30 +102,30 @@ role Generator {
     method generate() { ... }
 }
 
-# role Processor {
-#     also does Component;
-#     also does Emitter;
-#
-#     method prepare-producer(Supply @supplies) {
-#         Supply.merge(@supplies)
-#     }
-#
-#     method join(Emitter @sources) {
-#         return unless @sources;
-#
-#         my Supply @supplies = @sources.map({ .Supply });
-#         my $producer = self.prepare-producer(@supplies);
-#         $producer.tap(
-#             -> $item {
-#                 self.process($item);
-#             },
-#             done => { self.done },
-#         );
-#     }
-#
-#     method process(%item) { ... }
-# }
-#
+role Processor {
+    also does Component;
+    also does Emitter;
+
+    method prepare-producer(@supplies) {
+        Supply.merge(@supplies)
+    }
+
+    multi method join(@sources) {
+        return unless @sources;
+
+        my Supply @supplies = @sources.map({ .Supply });
+        my $producer = self.prepare-producer(@supplies);
+        $producer.tap(
+            -> $item {
+                self.process($item);
+            },
+            done => { self.done },
+        );
+    }
+
+    method process(%item) { ... }
+}
+
 class Context
 does Builder {
     use App::Perlocution::Filters;

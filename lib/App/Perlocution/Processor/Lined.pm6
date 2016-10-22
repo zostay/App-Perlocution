@@ -1,26 +1,27 @@
 use v6;
 
+use App::Perlocution;
+
 class App::Perlocution::Processor::Lined
 does App::Perlocution::Processor
-does App::Perloction::Builder {
+does App::Perlocution::Builder {
 
     role Slurper does App::Perlocution::Filtered {
         has Str $.name;
-        has @.filter;
 
-        method slurp-up(@lines is rw) { ... }
+        method slurp-up(@lines) { ... }
 
-        method slurp-field(%item is rw, @lines is rw) {
+        method slurp-field(%item, @lines) {
             my $value = self.slurp-up(@lines);
-            %item{ $.name } = self.apply-filter($value, @.filter);
+            %item{ $.name } = self.apply-filter($value);
         }
     }
     class Single does Slurper {
-        method slurp-up(@lines is rw) { @lines.shift }
+        method slurp-up(@lines) { @lines.shift }
     }
     class Paragraph does Slurper {
-        method slurp-up(@lines is rw) {
-            [~] gather do {
+        method slurp-up(@lines) {
+            join "\n", gather {
                 while @lines.elems > 0 && @lines[0] !~~ /\S/ {
                     @lines.shift;
                 }
@@ -31,10 +32,11 @@ does App::Perloction::Builder {
         }
     }
     class Slurp does Slurper {
-        method slurp-up(@lines is rw) {
-            my @result = @lines;
+        method slurp-up(@lines) {
+            my $keep = False;
+            my @result = @lines.grep({ $keep ||= ?/\S/ });
             @lines = ();
-            [~] @result;
+            @result.join("\n");
         }
     }
 
