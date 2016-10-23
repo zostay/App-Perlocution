@@ -116,6 +116,6 @@ is-deeply @files, [
             Blah
             END_OF_THREE
         },
-];
+], 'lined processing parses content nicely';
 
 done-testing;
