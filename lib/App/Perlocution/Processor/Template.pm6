@@ -1,5 +1,7 @@
 use v6;
 
+use App::Perlocution;
+
 class App::Perlocution::Processor::Template
 does App::Perlocution::Processor
 does App::Perlocution::Builder {
@@ -12,7 +14,7 @@ does App::Perlocution::Builder {
                     has $.source;
 
                     method set($name, $value) {
-                        $!source ~~ s:global/'$' $name >/$value/;
+                        $!source ~~ s:global/ '$' $name >> /$value/;
                     }
 
                     method Str { $!source }
@@ -43,17 +45,17 @@ does App::Perlocution::Builder {
             );
         }
 
-        method template(%item is rw) {
+        method template(%item) {
             %item{ $.name } = &.render.(%item)
         }
     }
 
-    class Template::Anti does App::Perlocution::Builder {
+    class Anti does App::Perlocution::Builder {
         has Str $.name;
-        has Str $.template;
+        has Str $.anti;
         has Str @.include;
 
-        has $.library;
+        has Template::Anti::Library $.library;
 
         method from-plan(::CLASS:U:
             :$context,
@@ -77,11 +79,12 @@ does App::Perlocution::Builder {
                 :%views,
             );
 
-            self.new(:$name, :$template, :$library);
+            my $anti = $template;
+            self.new(:$name, :$anti, :$library);
         }
 
-        method template(%item is rw) {
-            %item{ $.name } = $.library.process($.template, %item);
+        method template(%item) {
+            %item{ $.name } = $.library.process($.anti, %item);
         }
     }
 
@@ -95,7 +98,7 @@ does App::Perlocution::Builder {
                 :type-prefix(self.^name),
                 :section<templates>,
             );
-        }
+        });
 
         self.new(:$context, templates => @setup-templates);
     }

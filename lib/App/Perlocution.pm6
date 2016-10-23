@@ -27,14 +27,16 @@ role Builder {
             $type-name;
         }
 
-        my $type = do try {
+        my $type;
+        try {
             CATCH {
                 when X::NoSuchSymbol {
                     require-from @include, $class-name;
-                    .resume;
+                    $type = ::($class-name);
                 }
             }
-            ::($class-name);
+
+            $type = ::($class-name);
         }
 
         $type.from-plan(:$context, |%config);
@@ -90,6 +92,7 @@ role Emitter {
 
     method emit($item) { $!items.emit($item) }
     method done() { $!items.done }
+    method quit($x) { $!items.quit($x) }
     multi method Supply { $!items.Supply }
 }
 
@@ -117,9 +120,14 @@ role Processor {
         my $producer = self.prepare-producer(@supplies);
         $producer.tap(
             -> $item {
+                CATCH {
+                    default { self.quit($_) }
+                }
+
                 self.process($item);
             },
             done => { self.done },
+            quit => { self.quit($_) },
         );
     }
 

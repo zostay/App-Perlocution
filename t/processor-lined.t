@@ -2,6 +2,7 @@ use v6;
 
 use Test;
 use App::Perlocution;
+use App::Perlocution::Generator::FromList;
 use App::Perlocution::Processor::Lined;
 
 my $context = App::Perlocution::Context.new;
@@ -25,14 +26,7 @@ my $proc = App::Perlocution::Processor::Lined.from-plan(
     ],
 );
 
-my $gen = class :: does App::Perlocution::Emitter {
-    has @.items;
-
-    method generate {
-        for @.items { self.emit($_) }
-        self.done;
-    }
-}.new(
+my $gen = App::Perlocution::Generator::FromList.new(
     items => [
         {
             content => q:to/END_OF_ONE/,
@@ -70,11 +64,11 @@ my $gen = class :: does App::Perlocution::Emitter {
 );
 
 $proc.join([ $gen ]);
-my $files = $proc.Supply;
+my $items = $proc.Supply;
 start { $gen.generate }
 
-my @files = |$files.list;
-is-deeply @files, [
+my @items = |$items.list;
+is-deeply @items, [
         {
             title => 'One',
             meta => 'Author: Bob',
