@@ -25,7 +25,6 @@ does App::Perlocution::Builder {
 
     class Simple {
         has Str $.name;
-        has Str $.template;
         has &.render;
 
         method from-plan(::?CLASS:U: :$name, :$template) {
@@ -46,7 +45,7 @@ does App::Perlocution::Builder {
         }
 
         method template(%item) {
-            %item{ $.name } = &.render.(%item)
+            %item{ $.name } = &.render.(%item);
         }
     }
 
@@ -62,10 +61,10 @@ does App::Perlocution::Builder {
             :$name,
             :$template,
             :@include,
-            :%views,
+            :%views is copy,
             :@path,
         ) {
-            my %ta-views = %views.kv.map(-> $key, %view-config {
+            %views = %views.kv.map(-> $key, %view-config {
                 $key => self.build-from-plan(
                     %view-config,
                     :$context,

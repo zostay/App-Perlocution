@@ -7,6 +7,15 @@ use JSON::Tiny;
 class Context { ... }
 
 role Builder {
+    method !construct($type, Capture $c) {
+        if $type.^find_method('from-plan') {
+            $type.from-plan(|$c);
+        }
+        else {
+            $type.new;
+        }
+    }
+
     multi method build-from-plan(%config, :$section, :$type-prefix!, Context :$context!, :@include) {
         my %plan = $context.plan;
 
@@ -39,7 +48,7 @@ role Builder {
             $type = ::($class-name);
         }
 
-        $type.from-plan(:$context, |%config);
+        self!construct($type, \(:$context, |%config));
     }
 
     multi method build-from-plan(%config, :$section, :$type!, :$context!, :@include) {
@@ -54,7 +63,7 @@ role Builder {
             }
         }
 
-        $type.from-plan(:$context, |%config);
+        self!construct($type, \(:$context, |%config));
     }
 }
 
