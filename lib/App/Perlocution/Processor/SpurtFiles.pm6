@@ -1,7 +1,9 @@
 use v6;
 
+use App::Perlocution;
+
 class App::Perlocution::Processor::SpurtFiles
-does App::Perlocution::Process {
+does App::Perlocution::Processor {
     has IO::Path $.directory;
     has Str $.filename-field;
     has Str $.spurt-field;
@@ -21,6 +23,6 @@ does App::Perlocution::Process {
         my $file = $.directory.child($filename);
         $file.spurt($content);
 
-        emit %item;
+        self.emit(%item);
     }
 }
