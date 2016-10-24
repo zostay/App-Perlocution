@@ -126,6 +126,6 @@ is-deeply @items, [
         </html>
         END_OF_THREE
     },
-];
+], 'template processor works';
 
 done-testing;

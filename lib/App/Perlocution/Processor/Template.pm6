@@ -20,6 +20,10 @@ does App::Perlocution::Builder {
                     method Str { $!source }
                 }.new(:$source);
             }
+
+            method prepare-original($master) {
+                $master.clone;
+            }
         }
     }
 
