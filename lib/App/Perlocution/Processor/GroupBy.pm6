@@ -1,70 +1,58 @@
 use v6;
 
+use App::Perlocution;
+
 class App::Perlocution::Processor::GroupBy does App::Perlocution::Processor {
+    has $.items;
     has @.group-by;
-    has @.order-by;
 
-    method order-function {
-        sub ($a, $b) {
-            [||] do for @.order-by -> $field {
-                my $direction = $field ~~ s/^ '-'//;
-                if !$direction {
-                    $a{$field} cmp $b{$field}
-                }
-                else {
-                    $a{$field} Rcmp $b{$field}
-                }
-            }
-        }
+    has %!bucket-order{Capture};
+    has %!buckets{Capture};
+
+    method from-plan(::?CLASS:U: :$items, :@group-by) {
+        self.new(:$items, :@group-by);
     }
 
-    method prepare-producer(@supplies) {
-        my $supply = Supply.merge(@supplies);
-        $supply.reduce({ |$^a, $^b });
+    method done {
+        for %!bucket-order.sort(*.value cmp *.value)».key -> $key {
+            self.emit(%!buckets{ $key });
+        }
+        $!feed.done;
     }
 
-    method process-item-group-by(:%buckets is rw, :%item is copy, :@group-by) {
-        my ($name, $from) = @group-by[0]<name from>;
-
-        my $value = %item{ $from };
-        my @values = $value ~~ Iterable ?? |$value !! $value;
-
-        for @values -> $value {
-            if @group-by.elems > 1 {
-                %buckets{ $value } //= %();
-                %buckets{ $value } = self.process-item-group-by(
-                    buckets  => %buckets{ $value },
-                    item     => %item,
-                    group-by => @group-by[1..*],
-                );
-            }
-            else {
-                %buckets{ $value } //= [];
-                %buckets{ $value }.push: %item;
-
-                # TODO SUPER INEFFICIENT, but easy to implement
-                %buckets{ $value } .= sort(self.order-function);
-            }
-        }
-    }
-
-    method process(@item) {
-        my %buckets;
-
-        for @item -> %item is copy {
-            self.process-item-group-by(:%buckets, :%item, :@group-by);
+    method process(%item) {
+        # Special case: group all
+        if not @!group-by {
+            %!bucket-order{\()} = 1;
+            %!buckets{\()}{ $!items }.push: %item;
+            return;
         }
 
-        my @list = %buckets.values;
-        for @list -> $stuff {
-            given $stuff {
-                when Hash { append @list, $stuff.values }
-                default   {
-                    for |$stuff -> $v {
-                        self.emit($v);
-                    }
-                }
+        my @key-order = @!group-by.map({ .<name> });
+        my @metas = gather for @!group-by -> %grouping {
+            my ($from, $name) := %grouping<from name>;
+            my @values = do given %item{ $from } {
+                when Iterable { |$_ }
+                when so .defined { $_ }
+                default { next }
             }
+
+            next unless @values > 0;
+
+            take @values.map(-> $value { $name => $value }).Array;
+        }
+
+        return unless @metas > 0;
+
+        my @crossed-metas = |(@metas > 1 ?? [X] @metas !! @metas[0]);
+
+        for @crossed-metas -> $expanded-meta {
+            my %meta = $expanded-meta;
+            my $key := \(|%meta{@key-order});
+            %!bucket-order{ $key } //= %!bucket-order.elems + 1;
+            my %bucket := %!buckets{ $key } //= %meta;
+            %bucket{ $!items } //= [];
+            %bucket{ $!items }.push: %item;
         }
     }
 }

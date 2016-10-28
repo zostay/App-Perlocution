@@ -97,12 +97,12 @@ role Filtered {
 }
 
 role Emitter {
-    has Supplier $!items = Supplier.new;
+    has Supplier $!feed = Supplier.new;
 
-    method emit($item) { $!items.emit($item) }
-    method done() { $!items.done }
-    method quit($x) { $!items.quit($x) }
-    multi method Supply { $!items.Supply }
+    method emit($item) { $!feed.emit($item) }
+    method done() { $!feed.done }
+    method quit($x) { $!feed.quit($x) }
+    multi method Supply { $!feed.Supply }
 }
 
 role Component { ... }
