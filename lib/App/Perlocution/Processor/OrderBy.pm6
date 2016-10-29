@@ -1,12 +1,18 @@
 use v6;
 
+use App::Perlocution;
+
 class App::Perlocution::Processor::OrderBy
 does App::Perlocution::Processor {
     has @.order-by;
 
+    method from-plan(::?CLASS:U: :@order-by) {
+        self.new(:@order-by);
+    }
+
     method order-function {
         sub ($a, $b) {
-            [||] do for @.order-by -> $field {
+            [||] do for @.order-by -> $field is copy {
                 my $direction = $field ~~ s/^ '-'//;
                 if !$direction {
                     $a{$field} cmp $b{$field}
