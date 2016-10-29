@@ -6,10 +6,6 @@ class App::Perlocution::Generator::FromList
 does App::Perlocution::Emitter {
     has @.items;
 
-    method from-plan(::?CLASS:U: :@items) {
-        self.new(:@items);
-    }
-
     method generate {
         for @.items { self.emit($_) }
         self.done;

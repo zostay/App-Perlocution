@@ -304,3 +304,4 @@ my $context = App::Perlocution::Context.new;
     ], 'multi field mixed item group by works';
 }
 
+done-testing;

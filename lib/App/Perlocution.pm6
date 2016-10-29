@@ -236,11 +236,11 @@ does Builder {
 }
 
 role Component {
-#     has Context $.context;
-#
-#     method from-plan(::?CLASS:U: *%config) {
-#         self.new(|%config);
-#     }
+     has Context $.context;
+
+     method from-plan(::?CLASS:U: *%config) {
+         self.new(|%config);
+     }
 }
 
 class Filter

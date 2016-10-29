@@ -31,7 +31,7 @@ my $context = App::Perlocution::Context.from-plan(
     },
 );
 
-$context.run;
+await $context.run;
 
 my @things = |$context.processor('modify-things').Supply.list;
 is-deeply @things, [
@@ -40,3 +40,5 @@ is-deeply @things, [
     { id => 'c', value => 1 },
     { id => 'd', value => 1 },
 ], 'context ran the test correctly';
+
+done-testing;
