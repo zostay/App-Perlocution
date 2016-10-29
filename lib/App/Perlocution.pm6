@@ -146,8 +146,7 @@ role Processor {
 class Context
 does Builder {
     use App::Perlocution::Filters;
-#    use Filtered;
-#
+
     has %.plan;
     has %.generators;
     has %.processors;
@@ -224,15 +223,15 @@ does Builder {
         }
     }
 
-#    method apply-filter($v, @filter) {
-#        # Ah, the power of punning
-#        my $filter = Filtered.from-plan(
-#            context => self,
-#            filter  => @filter,
-#        );
-#
-#        $filter.apply-filter($v);
-#    }
+    method apply-filter($v, @filter) {
+        # Ah, the power of punning
+        my $filter = Filtered.from-plan(
+            context => self,
+            filter  => @filter,
+        );
+
+        $filter.apply-filter($v);
+    }
 }
 
 role Component {
