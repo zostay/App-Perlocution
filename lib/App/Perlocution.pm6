@@ -140,7 +140,7 @@ role Processor {
         );
     }
 
-    method process(%item) { ... }
+    method process($item) { ... }
 }
 
 class Context
@@ -149,57 +149,81 @@ does Builder {
 #    use Filtered;
 #
     has %.plan;
-#    has %.generators;
-#    has %.processors;
+    has %.generators;
+    has %.processors;
+    has @.run;
     has %.filters =
             :&split, :&map, :&trim,# :&markdown,
             :&clip-end, :&clip-start,
         ;
 
-#    method processor($name) {
-#        %.processors{ $name } //= self.build-from-plan(
-#            %.plan<processors>{ $name },
-#            :context(self),
-#            :type-prefix<App::Perlocution::Processor>,
-#            :section<processors>
-#        );
-#    }
-#
-#    method generator($name) {
-#        %.generators{ $name } //= self.build-from-plan(
-#            %.plan<generators>{ $name },
-#            :context(self),
-#            :type-prefix<App::Perlocution::Generator>,
-#            :section<generators>
-#        );
-#    }
-#
-#    method from-plan(::?CLASS:U: %plan) {
-#        my $self = self.new(:%plan);
-#        $self.init;
-#    }
-#
-#    method init(::?CLASS:D:) {
-#        for %plan<flow>.kv -> $processor-name, @source-names {
-#            my $processor = self.processor($processor-name);
-#
-#            my Emitter @sources = @source-names.map(-> $name {
-#                my ($type, $real-name) = $name.split(':', 2);
-#                my $obj = do given $type {
-#                    when 'generator' { self.generator($real-name) }
-#                    when 'processor' { self.processor($real-name) }
-#                    default {
-#                        die qq[unknown process type "$_"];
-#                    }
-#                }
-#            });
-#
-#            $processor.join(@sources);
-#        }
-#
-#        self;
-#    }
-#
+    method processor($name) {
+        %.processors{ $name } //= self.build-from-plan(
+            %.plan<processors>{ $name },
+            :context(self),
+            :type-prefix<App::Perlocution::Processor>,
+            :section<processors>
+        );
+    }
+
+    method generator($name) {
+        %.generators{ $name } //= self.build-from-plan(
+            %.plan<generators>{ $name },
+            :context(self),
+            :type-prefix<App::Perlocution::Generator>,
+            :section<generators>
+        );
+    }
+
+    method source($name) {
+        my ($type, $real-name) = $name.split(':', 2);
+        my $obj = do given $type {
+            when 'generator' { self.generator($real-name) }
+            when 'processor' { self.processor($real-name) }
+            default {
+                die qq[unknown process type "$_"];
+            }
+        }
+    }
+
+    method from-plan(::?CLASS:U: *%plan) {
+        my $self = self.new(:%plan);
+        $self.init;
+    }
+
+    method init(::?CLASS:D:) {
+        for %!plan<flow>.kv -> $processor-name, $source-names {
+            my @source-names = |$source-names.list;
+            my $processor = self.processor($processor-name);
+
+            my Emitter @sources = @source-names.map(-> $name {
+                self.source($name);
+            });
+
+            $processor.join(@sources);
+        }
+
+        @!run = (%!plan<run> // %!generators.keys).map({
+            self.generator($^name);
+        });
+
+        self;
+    }
+
+    method run() {
+        do for @!run -> $generator {
+            start {
+                CATCH {
+                    default {
+                        note "Failed during generation: $_";
+                    }
+                }
+
+                $generator.generate;
+            }
+        }
+    }
+
 #    method apply-filter($v, @filter) {
 #        # Ah, the power of punning
 #        my $filter = Filtered.from-plan(
