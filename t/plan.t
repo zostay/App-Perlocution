@@ -33,16 +33,15 @@ my $plan = load-plan(q:to/END_OF_PLAN/);
 }
 END_OF_PLAN
 
-my $things = |$plan.context.processor('modify-things').Supply;
 $plan.execute;
 
-my @things = |$things.list;
+my @things = |$plan.context.processor('modify-things').Supply.list;
 is-deeply @things, [
     { id => 'a', value => 1 },
     { id => 'b', value => 1 },
     { id => 'c', value => 1 },
     { id => 'd', value => 1 },
-], 'context ran the test correctly';
+], 'plan ran the test correctly';
 
 done-testing;
 

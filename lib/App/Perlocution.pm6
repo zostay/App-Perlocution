@@ -97,7 +97,7 @@ role Filtered {
 }
 
 role Emitter {
-    has Supplier $!feed = Supplier.new;
+    has Supplier $!feed = Supplier::Preserving.new;
 
     method emit($item) { $!feed.emit($item) }
     method done() { $!feed.done }
@@ -241,11 +241,7 @@ does Builder {
 }
 
 role Component {
-     has Context $.context;
-
-     method from-plan(::?CLASS:U: *%config) {
-         self.new(|%config);
-     }
+     method from-plan { ... }
 }
 
 class Filter
