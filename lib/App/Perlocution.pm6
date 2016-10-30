@@ -157,6 +157,9 @@ does Builder {
         ;
 
     method processor($name) {
+        die qq[no configuration for processor named "$name"]
+            unless %!plan<processors>{ $name }:exists;
+
         %.processors{ $name } //= self.build-from-plan(
             %.plan<processors>{ $name },
             :context(self),
@@ -166,6 +169,9 @@ does Builder {
     }
 
     method generator($name) {
+        die qq[no configuration for generator named "$name"]
+            unless %!plan<generators>{ $name }:exists;
+
         %.generators{ $name } //= self.build-from-plan(
             %.plan<generators>{ $name },
             :context(self),
@@ -268,22 +274,24 @@ does Builder {
     }
 }
 
-# class Plan {
-#     has $.context;
-#
-#     method execute() {
-#         for $.context.generators.values -> $generator {
-#             start { $generator.generate }
-#         }
-#     }
-# }
-#
-# sub load-plan(IO::Path $plan-file) is export {
-#     my %plan = from-json($plan-file.slurp);
-#     my $context = Context.from-plan(:%plan);
-#     Plan.new(:$context);
-# }
-#
+class Plan {
+    has $.context;
+
+    method execute() {
+        await $!context.run;
+    }
+}
+
+multi load-plan(Str $plan-text) is export {
+    my %plan = from-json($plan-text);
+    my $context = Context.from-plan(|%plan);
+    Plan.new(:$context);
+}
+
+multi load-plan(IO::Path $plan-file) is export {
+    load-plan($plan-file.slurp);
+}
+
 # sub MAIN(Str :$plan-file = 'site.json') is export(:MAIN) {
 #     my $plan = load-plan($plan-file.IO);
 #     note "Plan loaded.";
