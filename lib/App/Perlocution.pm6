@@ -288,8 +288,8 @@ multi load-plan(IO::Path $plan-file) is export {
     load-plan($plan-file.slurp);
 }
 
-# sub MAIN(Str :$plan-file = 'site.json') is export(:MAIN) {
-#     my $plan = load-plan($plan-file.IO);
-#     note "Plan loaded.";
-#     $plan.execute;
-# }
+sub MAIN(Str :$plan-file = 'site.json') is export(:MAIN) {
+    my $plan = load-plan($plan-file.IO);
+    note "Plan loaded.";
+    $plan.execute;
+}
