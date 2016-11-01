@@ -6,7 +6,41 @@ use App::Perlocution::Processor::Paging;
 
 my $context = App::Perlocution::Context.new;
 
-{
+subtest 'next prev links are good' => {
+    my $proc = App::Perlocution::Processor::Paging.from-plan(
+        previous-name => 'prev',
+        next-name     => 'next',
+    );
+
+    my $gen = App::Perlocution::Generator::FromList.new(
+        items => [
+            { :id<a> },
+            { :id<b> },
+            { :id<c> },
+
+            { :id<d> },
+        ],
+    );
+
+    $proc.join([ $gen ]);
+    my $items = $proc.Supply;
+    start { $gen.generate }
+
+    my @items = |$items.list;
+
+    is @items[0]<id>, 'a', 'item a good';
+    is @items[0]<next><id>, 'b', 'item a->next is good';
+    is @items[1]<id>, 'b', 'item b good';
+    is @items[1]<next><id>, 'c', 'item b->next is good';
+    is @items[1]<prev><id>, 'a', 'item b->prev is good';
+    is @items[2]<id>, 'c', 'item c good';
+    is @items[2]<next><id>, 'd', 'item c->next is good';
+    is @items[2]<prev><id>, 'b', 'item c->prev is good';
+    is @items[3]<id>, 'd', 'item d good';
+    is @items[3]<prev><id>, 'c', 'item d->prev is good';
+}
+
+subtest 'next prev links are good with paging' => {
     my $proc = App::Perlocution::Processor::Paging.from-plan(
         previous-name => 'prev',
         next-name     => 'next',
@@ -29,15 +63,24 @@ my $context = App::Perlocution::Context.new;
     start { $gen.generate }
 
     my @items = |$items.list;
-    my $a := { :id<a>, :page(1) };
-    my $b := { :id<b>, :page(1) }; $a<next> := $b; $b<prev> := $a;
-    my $c := { :id<c>, :page(1) }; $b<next> := $c; $c<prev> := $b;
-    my $d := { :id<d>, :page(2) }; $c<next> := $d; $d<prev> := $c;
 
-    is-deeply @items, [ $a, $b, $c, $d ], "paging works";
+    is @items[0]<id>, 'a', 'item a good';
+    is @items[0]<page>, 1, 'item a page good';
+    is @items[0]<next><id>, 'b', 'item a->next is good';
+    is @items[1]<id>, 'b', 'item b good';
+    is @items[1]<page>, 1, 'item b page good';
+    is @items[1]<next><id>, 'c', 'item b->next is good';
+    is @items[1]<prev><id>, 'a', 'item b->prev is good';
+    is @items[2]<id>, 'c', 'item c good';
+    is @items[2]<page>, 1, 'item c page good';
+    is @items[2]<next><id>, 'd', 'item c->next is good';
+    is @items[2]<prev><id>, 'b', 'item c->prev is good';
+    is @items[3]<id>, 'd', 'item d good';
+    is @items[3]<page>, 2, 'item d page good';
+    is @items[3]<prev><id>, 'c', 'item d->prev is good';
 }
 
-{
+subtest 'min-per-page prevents break' => {
     my $proc = App::Perlocution::Processor::Paging.from-plan(
         previous-name => 'prev',
         next-name     => 'next',
@@ -65,18 +108,17 @@ my $context = App::Perlocution::Context.new;
     start { $gen.generate }
 
     my @items = |$items.list;
-    my $a := { :id<a>, :page(1) };
-    my $b := { :id<b>, :page(1) }; $a<next> := $b; $b<prev> := $a;
-    my $c := { :id<c>, :page(1) }; $b<next> := $c; $c<prev> := $b;
-    my $d := { :id<d>, :page(2) }; $c<next> := $d; $d<prev> := $c;
-    my $e := { :id<e>, :page(2) }; $d<next> := $e; $e<prev> := $d;
-    my $f := { :id<f>, :page(2) }; $e<next> := $f; $f<prev> := $e;
-    my $g := { :id<g>, :page(2) }; $f<next> := $g; $g<prev> := $f;
 
-    is-deeply @items, [ $a, $b, $c, $d, $e, $f, $g ], "min per page avoids break";
+    is @items[0]<page>, 1, 'a is 1';
+    is @items[1]<page>, 1, 'b is 1';
+    is @items[2]<page>, 1, 'c is 1';
+    is @items[3]<page>, 2, 'd is 2';
+    is @items[4]<page>, 2, 'e is 2';
+    is @items[5]<page>, 2, 'f is 2';
+    is @items[6]<page>, 2, 'g is 2';
 }
 
-{
+subtest 'min-per-page allows break' => {
     my $proc = App::Perlocution::Processor::Paging.from-plan(
         previous-name => 'prev',
         next-name     => 'next',
@@ -105,15 +147,14 @@ my $context = App::Perlocution::Context.new;
     start { $gen.generate }
 
     my @items = |$items.list;
-    my $a := { :id<a>, :page(1) };
-    my $b := { :id<b>, :page(1) }; $a<next> := $b; $b<prev> := $a;
-    my $c := { :id<c>, :page(1) }; $b<next> := $c; $c<prev> := $b;
-    my $d := { :id<d>, :page(2) }; $c<next> := $d; $d<prev> := $c;
-    my $e := { :id<e>, :page(2) }; $d<next> := $e; $e<prev> := $d;
-    my $f := { :id<f>, :page(2) }; $e<next> := $f; $f<prev> := $e;
-    my $g := { :id<g>, :page(3) }; $f<next> := $g; $g<prev> := $f;
-    my $h := { :id<h>, :page(3) }; $g<next> := $h; $h<prev> := $g;
-
-    is-deeply @items, [ $a, $b, $c, $d, $e, $f, $g, $h ], "min per page allows break";
+    is @items[0]<page>, 1, 'a is 1';
+    is @items[1]<page>, 1, 'b is 1';
+    is @items[2]<page>, 1, 'c is 1';
+    is @items[3]<page>, 2, 'd is 2';
+    is @items[4]<page>, 2, 'e is 2';
+    is @items[5]<page>, 2, 'f is 2';
+    is @items[6]<page>, 3, 'g is 3';
+    is @items[7]<page>, 3, 'h is 3';
 }
+
 done-testing;

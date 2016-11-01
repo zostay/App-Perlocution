@@ -1,5 +1,7 @@
 use v6;
 
+use App::Perlocution;
+
 class App::Perlocution::Processor::Paging
 does App::Perlocution::Processor {
     has Str $.previous-name;
@@ -8,30 +10,30 @@ does App::Perlocution::Processor {
     has Int $.page-limit;
     has Int $.minimum-per-page = 1;
 
-    has Int $!page-number = 1;
+    has Int $!page-number = 0;
     has Int $!page-offset = 0;
     has @!previous-items;
 
     method from-plan(::?CLASS:U:
         Str :$previous-name, Str :$next-name, Str :$page-name,
-        Int :$page-limit = 0 where * >= 0,
-        Int :min-per-page($minimum-per-page) = 1 where * >= 1,
+        Int :$page-limit = 0,
+        Int :min-per-page($minimum-per-page) = 1,
     ) {
         die "minimum-per-page must be no greater than page-limit"
-            if $page-limit > 0 && $minimum-per-page > $page-limit;
+            if $page-limit != 0 && $minimum-per-page > $page-limit;
 
         die "page-limit and page-name must both be specified"
-            if $page-limit != 0 || defined $page-name;
+            if $page-limit != 0 ^^ defined $page-name;
 
         self.new(
-            :$prevoius-name, :$next-name, $page-name,
+            :$previous-name, :$next-name, :$page-name,
             :$page-limit, :$minimum-per-page,
         );
     }
 
     method done() {
         self.emit($_) for @!previous-items;
-        self.App::Perlocution::Emitter::done;
+        $!feed.done;
     }
 
     method process(%item is copy) {
@@ -41,12 +43,38 @@ does App::Perlocution::Processor {
         }
 
         with $!next-name {
-            @!previous-items[0]{ $!next-name } := %item
+            @!previous-items[*-1]{ $!next-name } := %item
                 if @!previous-items;
         }
 
-        @!previous-items.push: %item;
-        self.emit(@!previous-items.shift)
-            if @!previous-items > 1;
+        @!previous-items[ @!previous-items.elems ] := %item;
+
+        if $!page-name {
+            $!page-offset++;
+
+            # Wait to emit until a page is filled
+            if $!page-offset > $!page-limit {
+                $!page-offset = 1;
+                self.emit(@!previous-items.shift)
+                    while @!previous-items > 1;
+            }
+
+            # Keep items with the previous page until min-per-page items
+            if $!page-offset == $!minimum-per-page {
+                $!page-number++;
+                for @!previous-items -> %item {
+                    %item{ $!page-name } = $!page-number;
+                }
+            }
+            else {
+                %item{ $!page-name } = $!page-number max 1;
+            }
+        }
+
+        # no page # so emission is simplified
+        else {
+            self.emit(@!previous-items.shift)
+                if @!previous-items > 1;
+        }
     }
 }
