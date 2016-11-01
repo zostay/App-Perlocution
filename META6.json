@@ -1,0 +1,42 @@
+{
+   "meta6" : "0",
+   "provides" : {
+       "App::Perlocution" : "lib/App/Perlocution.pm6",
+       "App::Perlocution::Builder" : "lib/App/Perlocution.pm6",
+       "App::Perlocution::Component" : "lib/App/Perlocution.pm6",
+       "App::Perlocution::Context" : "lib/App/Perlocution.pm6",
+       "App::Perlocution::Emitter" : "lib/App/Perlocution.pm6",
+       "App::Perlocution::Filter" : "lib/App/Perlocution.pm6",
+       "App::Perlocution::Filters" : "lib/App/Perlocution/Filters.pm6",
+       "App::Perlocution::Filtered" : "lib/App/Perlocution.pm6",
+       "App::Perlocution::Generator" : "lib/App/Perlocution.pm6",
+       "App::Perlocution::Generator::FromList" : "lib/App/Perlocution/Generator/FromList.pm6",
+       "App::Perlocution::Generator::SlurpFiles" : "lib/App/Perlocution/Generator/SlurpFiles.pm6",
+       "App::Perlocution::Plan" : "lib/App/Perlocution.pm6",
+       "App::Perlocution::Processor" : "lib/App/Perlocution.pm6",
+       "App::Perlocution::Processor::AddFields" : "lib/App/Perlocution/Processor/AddFields.pm6",
+       "App::Perlocution::Processor::GroupBy" : "lib/App/Perlocution/Processor/GroupBy.pm6",
+       "App::Perlocution::Processor::Lined" : "lib/App/Perlocution/Processor/Lined.pm6",
+       "App::Perlocution::Processor::OrderBy" : "lib/App/Perlocution/Processor/OrderBy.pm6",
+       "App::Perlocution::Processor::SpurtFiles" : "lib/App/Perlocution/Processor/SpurtFiles.pm6",
+       "App::Perlocution::Processor::Template" : "lib/App/Perlocution/Processor/Template.pm6"
+   },
+   "test-depends" : [
+      "Test", "Test::META"
+   ],
+   "support" : {
+      "source" : "git://github.com/zostay/App-Perlocution.git"
+   },
+   "perl" : "6.c",
+   "build-depends" : [],
+   "auth" : "github:zostay",
+   "source-url" : "git://github.com/zostay/App-Perlocution.git",
+   "depends" : [],
+   "name" : "App::Perlocution",
+   "authors" : [
+      "Sterling Hanenkamp <hanenkamp@cpan.org>"
+   ],
+   "version" : "0.1",
+   "license" : "Artistic",
+   "description" : "ETL pipelining tool for building static web sites."
+}
