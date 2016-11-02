@@ -18,6 +18,7 @@
        "App::Perlocution::Processor::GroupBy" : "lib/App/Perlocution/Processor/GroupBy.pm6",
        "App::Perlocution::Processor::Lined" : "lib/App/Perlocution/Processor/Lined.pm6",
        "App::Perlocution::Processor::OrderBy" : "lib/App/Perlocution/Processor/OrderBy.pm6",
+       "App::Perlocution::Processor::Paging" : "lib/App/Perlocution/Processor/Paging.pm6",
        "App::Perlocution::Processor::SpurtFiles" : "lib/App/Perlocution/Processor/SpurtFiles.pm6",
        "App::Perlocution::Processor::Template" : "lib/App/Perlocution/Processor/Template.pm6"
    },
@@ -36,7 +37,7 @@
    "authors" : [
       "Sterling Hanenkamp <hanenkamp@cpan.org>"
    ],
-   "version" : "0.1",
+   "version" : "0.2",
    "license" : "Artistic",
    "description" : "ETL pipelining tool for building static web sites."
 }

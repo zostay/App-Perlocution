@@ -1,4 +1,4 @@
-unit module App::Perlocution:ver<0.1>:auth<Sterling Hanenkamp (hanenkamp@cpan.org)>;
+unit module App::Perlocution:ver<0.2>:auth<Sterling Hanenkamp (hanenkamp@cpan.org)>;
 use v6;
 
 use CompUnit::DynamicLib;
