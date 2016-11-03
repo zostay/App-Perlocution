@@ -29,7 +29,6 @@ my $proc = App::Perlocution::Processor::Template.from-plan(
     ],
 );
 
-
 my $gen = App::Perlocution::Generator::FromList.new(
     items => [
         {

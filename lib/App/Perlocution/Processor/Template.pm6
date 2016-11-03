@@ -27,7 +27,7 @@ does App::Perlocution::Builder {
         }
     }
 
-    class Simple {
+    class Simple does App::Perlocution::Filtered {
         has Str $.name;
         has &.render;
 
@@ -53,7 +53,7 @@ does App::Perlocution::Builder {
         }
     }
 
-    class Anti does App::Perlocution::Builder {
+    class Anti does App::Perlocution::Filtered {
         has Str $.name;
         has Str $.anti;
         has Str @.include;

@@ -1,8 +1,10 @@
-unit module App::Perlocution:ver<0.2>:auth<Sterling Hanenkamp (hanenkamp@cpan.org)>;
+unit module App::Perlocution:ver<0.3>:auth<Sterling Hanenkamp (hanenkamp@cpan.org)>;
 use v6;
 
 use CompUnit::DynamicLib;
 use JSON::Tiny;
+
+use App::Perlocution::Filters;
 
 class Context { ... }
 
@@ -16,7 +18,7 @@ role Builder {
         }
     }
 
-    multi method build-from-plan(%config, :$section, :$type-prefix!, Context :$context!, :@include) {
+    multi method build-from-plan(%config is copy, :$section, :$type-prefix!, Context :$context!, :@include) {
         my %plan = $context.plan;
 
         with $section {
@@ -42,6 +44,9 @@ role Builder {
                 when X::NoSuchSymbol {
                     require-from @include, $class-name;
                     $type = ::($class-name);
+                }
+                default {
+                    die "Unable to load $class-name: $_";
                 }
             }
 
@@ -145,15 +150,19 @@ role Processor {
 
 class Context
 does Builder {
-    use App::Perlocution::Filters;
-
     has %.plan;
     has %.generators;
     has %.processors;
     has @.run;
     has %.filters =
-            :&split, :&map, :&trim,# :&markdown,
-            :&clip-end, :&clip-start,
+            :split(&App::Perlocution::Filters::split),
+            :map(&App::Perlocution::Filters::map),
+            :trim(&App::Perlocution::Filters::trim),# :&markdown,
+            :clip-end(&App::Perlocution::Filters::clip-end),
+            :clip-start(&App::Perlocution::Filters::clip-start),
+            :subst(&App::Perlocution::Filters::subst),
+            :subst-re(&App::Perlocution::Filters::subst-re),
+            :markdown(&App::Perlocution::Filters::markdown),
         ;
 
     method processor($name) {

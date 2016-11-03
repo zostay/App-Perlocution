@@ -37,7 +37,7 @@
    "authors" : [
       "Sterling Hanenkamp <hanenkamp@cpan.org>"
    ],
-   "version" : "0.2",
+   "version" : "0.3",
    "license" : "Artistic",
    "description" : "ETL pipelining tool for building static web sites."
 }

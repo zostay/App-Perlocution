@@ -1,18 +1,19 @@
 unit module App::Perlocution::Filters;
 use v6;
 
-#use Text::Markdown;
+use Text::Markdown;
 
-sub split($v, :$context, :$by) is export { $v.split($by) }
-sub map(@v, :$context, :@filter) is export {
+our sub split($v, :$context, :$by) { $v.split($by) }
+our sub map($v, :$context, :@filter) {
+    my @v = |$v;
     @v.map({
         $context.apply-filter($_, @filter);
     });
 }
-sub trim($v, :$context) is export { $v.trim }
-#sub markdown($v, :$context) { markdown($v) }
+our sub trim($v, :$context) { $v.trim }
+our sub markdown($v, :$context) { Text::Markdown.new($v).render }
 
-sub clip-end($v, :$context, :$from) is export {
+our sub clip-end($v, :$context, :$from) {
     with $v.rindex($from) -> $index {
         $v.substr(0, $index);
     }
@@ -21,11 +22,19 @@ sub clip-end($v, :$context, :$from) is export {
     }
 }
 
-sub clip-start($v, :$context, :$to) is export {
+our sub clip-start($v, :$context, :$to) {
     with $v.index($to) -> $index {
         $v.substr($index + 1);
     }
     else {
         $v
     }
+}
+
+our sub subst($v, :$match, :$replacement, :$global) {
+    $v.subst($match, $replacement, :$global);
+}
+
+our sub subst-re($v, :$match, :$replacement, :$global) {
+    $v.subst(/<{$match}>/, $replacement, :$global);
 }
