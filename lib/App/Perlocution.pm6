@@ -301,4 +301,5 @@ sub MAIN(Str :$plan-file = 'site.json') is export(:MAIN) {
     my $plan = load-plan($plan-file.IO);
     note "Plan loaded.";
     $plan.execute;
+    note "Fin.";
 }

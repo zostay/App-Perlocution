@@ -5,10 +5,13 @@ use App::Perlocution;
 class App::Perlocution::Processor::Template
 does App::Perlocution::Processor
 does App::Perlocution::Builder {
-    use Template::Anti :ALL;
+    class Simple does App::Perlocution::Filtered {
+        has Str $.name;
+        has &.render;
 
-    multi get-anti-format-object('simple') {
-        class {
+        use Template::Anti :one-off;
+
+        class SimpleFormat is Template::Anti::Format {
             method parse($source) {
                 class {
                     has $.source;
@@ -24,26 +27,23 @@ does App::Perlocution::Builder {
             method prepare-original($master) {
                 $master.clone;
             }
-        }
-    }
 
-    class Simple does App::Perlocution::Filtered {
-        has Str $.name;
-        has &.render;
+            method render($final) { $final.source }
+        }
+
+        sub simple-process($dom, %item) {
+            for %item.kv -> $key, $value {
+                $dom.set($key, $value);
+            }
+        }
 
         method from-plan(::?CLASS:U: :$name, :$template) {
-            sub simple-process($dom, %item) {
-                for %item.kv -> $key, $value {
-                    $dom.set($key, $value);
-                }
-            }
-
             self.new(
                 :$name,
                 :$template,
                 render => anti-template(&simple-process,
                     :source($template),
-                    :format<simple>,
+                    :format(SimpleFormat),
                 ),
             );
         }
@@ -54,6 +54,8 @@ does App::Perlocution::Builder {
     }
 
     class Anti does App::Perlocution::Filtered {
+        use Template::Anti;
+
         has Str $.name;
         has Str $.anti;
         has Str @.include;
