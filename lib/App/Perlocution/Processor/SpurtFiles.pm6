@@ -21,6 +21,8 @@ does App::Perlocution::Processor {
         return unless $content.defined;
 
         my $file = $.directory.child($filename);
+        self.debug("Writing %s", $file);
+
         $file.spurt($content);
 
         self.emit(%item);

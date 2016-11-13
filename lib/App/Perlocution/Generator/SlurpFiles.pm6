@@ -27,6 +27,8 @@ does App::Perlocution::Generator {
         for flat @.globs.map({ .dir }) -> $file {
             next unless $file ~~ :f;
 
+            self.debug("Reading %s", $file);
+
             my %file-item;
             for %.meta.kv -> $name, %p {
                 my $filter = %p<filter>;

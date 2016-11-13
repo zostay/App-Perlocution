@@ -15,10 +15,10 @@ does App::Perlocution::Processor {
             [||] do for @.order-by -> $field is copy {
                 my $direction = $field ~~ s/^ '-'//;
                 if !$direction {
-                    $a{$field} cmp $b{$field}
+                    ($a{$field}//'') cmp ($b{$field}//'')
                 }
                 else {
-                    $a{$field} Rcmp $b{$field}
+                    ($a{$field}//'') Rcmp ($b{$field}//'')
                 }
             }
         }

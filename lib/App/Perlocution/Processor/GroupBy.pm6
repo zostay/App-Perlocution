@@ -10,6 +10,7 @@ class App::Perlocution::Processor::GroupBy does App::Perlocution::Processor {
     has %!buckets{Capture};
 
     method from-plan(::?CLASS:U: :$items, :@group-by) {
+        die "items is a required setting for the GroupBy processor" without $items;
         self.new(:$items, :@group-by);
     }
 
@@ -24,6 +25,7 @@ class App::Perlocution::Processor::GroupBy does App::Perlocution::Processor {
         # Special case: group all
         if not @!group-by {
             %!bucket-order{\()} = 1;
+            %!buckets{\()}{ $!items } //= [];
             %!buckets{\()}{ $!items }.push: %item;
             return;
         }

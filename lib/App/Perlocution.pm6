@@ -6,6 +6,58 @@ use JSON::Tiny;
 
 use App::Perlocution::Filters;
 
+class LogConfig {
+    our enum Level <Debug Info Warn Error>;
+
+    has $.display-level = Debug;
+
+    method instance() {
+        state LogConfig $log-config = LogConfig.new;
+        $log-config;
+    }
+}
+
+class Logger {
+    method display-level() returns LogConfig::Level {
+        LogConfig.instance.display-level;
+    }
+
+    method debug($fmt, *@stuffing) {
+        self.log(LogConfig::Level::Debug, $fmt, @stuffing);
+    }
+
+    method info($fmt, *@stuffing) {
+        self.log(LogConfig::Level::Info, $fmt, @stuffing);
+    }
+
+    method warn($fmt, *@stuffing) {
+        self.log(LogConfig::Level::Warn, $fmt, @stuffing);
+    }
+
+    method error($fmt, *@stuffing) {
+        self.log(LogConfig::Level::Error, $fmt, @stuffing);
+    }
+
+    method log(LogConfig::Level $level, Str:D $fmt, @stuffing) {
+        if $level >= $.display-level {
+            note sprintf("[%s] [%s] $fmt",
+                    $level.Str.lc,
+                    ~DateTime.now,
+                    |@stuffing,
+                );
+        }
+    }
+}
+
+role Loggish {
+    has Logger $.logger = Logger.new;
+
+    method debug($fmt, *@stuffing) { $!logger.debug($fmt, |@stuffing) }
+    method info($fmt, *@stuffing) { $!logger.info($fmt, |@stuffing) }
+    method warn($fmt, *@stuffing) { $!logger.warn($fmt, |@stuffing) }
+    method error($fmt, *@stuffing) { $!logger.error($fmt, |@stuffing) }
+}
+
 class Context { ... }
 
 role Builder {
@@ -104,13 +156,16 @@ role Filtered {
 role Emitter {
     has Supplier $!feed = Supplier::Preserving.new;
 
-    method emit($item) { $!feed.emit($item) }
+    method emit($item) {
+        #note "{self.^name} $item<id>";
+        $!feed.emit($item)
+    }
     method done() { $!feed.done }
     method quit($x) { $!feed.quit($x) }
     multi method Supply { $!feed.Supply }
 }
 
-role Component { ... }
+role Component { ...  }
 
 role Generator {
     also does Component;
@@ -133,9 +188,12 @@ role Processor {
         my Supply @supplies = @sources.map({ .Supply });
         my $producer = self.prepare-producer(@supplies);
         $producer.tap(
-            -> $item {
+            sub ($item) {
                 CATCH {
-                    default { self.quit($_) }
+                    default {
+                        warn "Failure in {self.^name}: $_";
+                        .rethrow;
+                    }
                 }
 
                 self.process($item);
@@ -149,6 +207,7 @@ role Processor {
 }
 
 class Context
+does Loggish
 does Builder {
     has %.plan;
     has %.generators;
@@ -191,6 +250,7 @@ does Builder {
 
     method source($name) {
         my ($type, $real-name) = $name.split(':', 2);
+        self.debug("Configuring %s %s", $type, $real-name);
         my $obj = do given $type {
             when 'generator' { self.generator($real-name) }
             when 'processor' { self.processor($real-name) }
@@ -214,6 +274,7 @@ does Builder {
                 self.source($name);
             });
 
+            self.debug("Joining %s <- %s", $processor-name, @source-names.join(", "));
             $processor.join(@sources);
         }
 
@@ -250,7 +311,9 @@ does Builder {
 }
 
 role Component {
-     method from-plan { ... }
+    also does Loggish;
+
+    method from-plan { ... }
 }
 
 class Filter
@@ -299,7 +362,8 @@ multi load-plan(IO::Path $plan-file) is export {
 
 sub MAIN(Str :$plan-file = 'site.json') is export(:MAIN) {
     my $plan = load-plan($plan-file.IO);
-    note "Plan loaded.";
+    my $logger = Logger.new;
+    $logger.info("Plan loaded.");
     $plan.execute;
-    note "Fin.";
+    $logger.info("Fin.");
 }

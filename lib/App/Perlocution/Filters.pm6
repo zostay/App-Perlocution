@@ -8,7 +8,7 @@ our sub map($v, :$context, :@filter) {
     my @v = |$v;
     @v.map({
         $context.apply-filter($_, @filter);
-    });
+    }).cache;
 }
 our sub trim($v, :$context) { $v.trim }
 our sub markdown($v, :$context) { Text::Markdown.new($v).render }
