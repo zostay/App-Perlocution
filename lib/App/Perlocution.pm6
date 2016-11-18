@@ -153,7 +153,51 @@ role Filtered {
     }
 }
 
+class Queue {
+    has @.items;
+
+    method enq($item) { push @!items, $item }
+    method deq() { shift @!items }
+
+    method ready() { ?@!items }
+    method empty() { !$.ready }
+
+    method merge(Queue:U: @queues) {
+        class :: is Queue {
+            has @.queues;
+
+            method deq() {
+                return shift @!items if @!items;
+                for @!queues -> $q {
+                    return $q.deq if $q.ready;
+                }
+            }
+
+            method ready() {
+                ?@!items || [|] @queues.map({ .ready })
+            }
+        }
+    }
+}
+
 role Emitter {
+    method emit($item) { ... }
+    method done() { ... }
+    method quit($x) { ... }
+}
+
+role QueueEmitter {
+    has Queue $!queue .= new;
+
+    method emit($item) { $!queue.enq($item) }
+
+    method done() { }
+    method quit($x) { }
+
+    multi method Queue { $!queue }
+}
+
+role AsyncEmitter {
     has Supplier $!feed = Supplier::Preserving.new;
 
     method emit($item) {
@@ -177,6 +221,30 @@ role Generator {
 role Processor {
     also does Component;
     also does Emitter;
+
+    multi method join(@sources) { ... }
+    method process($item) { ... }
+}
+
+role QueueProcessor {
+    also does QueueEmitter;
+
+    has $.queue;
+
+    method prepare-queue(@queues) {
+        Queue.merge(@queues);
+    }
+
+    multi method join(@sources) {
+        return unless @sources;
+
+        my Supply @queues = @sources.map({ .Queue });
+        $!queue = self.prepare-queue(@queues);
+    }
+}
+
+role SupplyProcessor {
+    also does SupplyEmitter;
 
     method prepare-producer(@supplies) {
         Supply.merge(@supplies)
@@ -285,20 +353,6 @@ does Builder {
         self;
     }
 
-    method run() {
-        do for @!run -> $generator {
-            start {
-                CATCH {
-                    default {
-                        note "Failed during generation: $_";
-                    }
-                }
-
-                $generator.generate;
-            }
-        }
-    }
-
     method apply-filter($v, @filter) {
         # Ah, the power of punning
         my $filter = Filtered.from-plan(
@@ -342,18 +396,42 @@ does Builder {
     }
 }
 
+class QueueRunner {
+}
+
+class AsyncRunner {
+    method promise-to-run($context) {
+        do for $context.run -> $generator {
+            start {
+                CATCH {
+                    default {
+                        note "Failed during generation: $_";
+                    }
+                }
+
+                $generator.generate;
+            }
+        }
+    }
+
+    method run($context) {
+        await self.promise-to-run($context);
+    }
+}
+
 class Plan {
     has $.context;
+    has $.runner;
 
     method execute() {
-        await $!context.run;
+        $!runner.run($!context);
     }
 }
 
 multi load-plan(Str $plan-text) is export {
     my %plan = from-json($plan-text);
     my $context = Context.from-plan(|%plan);
-    Plan.new(:$context);
+    Plan.new(:$context, :runner(QueueRunner.new));
 }
 
 multi load-plan(IO::Path $plan-file) is export {
