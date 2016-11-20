@@ -89,7 +89,7 @@ does App::Perlocution::Builder {
         }
 
         method template(%item) {
-            %item{ $.name } = $.library.process($.anti, %item);
+            %item{ $.name } = $.library.process($.anti, |%item);
         }
     }
 
