@@ -24,9 +24,9 @@ does App::Perlocution::Processor {
         }
     }
 
-    method prepare-producer(@supplies) {
-        my $supply = Supply.merge(@supplies);
-        $supply.sort(self.order-function);
+    method prepare-producer($helper, @things) {
+        my $producer = $helper.merge(@things);
+        $helper.sort($producer, self.order-function);
     }
 
     method process($item) {

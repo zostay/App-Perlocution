@@ -31,9 +31,8 @@ does App::Perlocution::Processor {
         );
     }
 
-    method done() {
+    method before-done() {
         self.emit($_) for @!previous-items;
-        $!feed.done;
     }
 
     method process(%item is copy) {

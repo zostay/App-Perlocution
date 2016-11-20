@@ -14,11 +14,10 @@ class App::Perlocution::Processor::GroupBy does App::Perlocution::Processor {
         self.new(:$items, :@group-by);
     }
 
-    method done {
+    method before-done {
         for %!bucket-order.sort(*.value cmp *.value)».key -> $key {
             self.emit(%!buckets{ $key });
         }
-        $!feed.done;
     }
 
     method process(%item) {

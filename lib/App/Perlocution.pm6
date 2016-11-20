@@ -70,7 +70,14 @@ role Builder {
         }
     }
 
-    multi method build-from-plan(%config is copy, :$section, :$type-prefix!, Context :$context!, :@include) {
+    multi method build-from-plan(
+        %config is copy,    #= The configuration to build with
+        :$section,          #= Name of the section to lookup config keys in the plan
+        :$type-prefix!,     #= Prefix to put beofre the type name of the object
+        Context :$context!, #= The Context object, used to get the entire plan
+        :@include,          #= Additional directories to search for .pm6 files
+        :@roles,            #= Additional roles to apply to the constructed object
+    ) {
         my %plan = $context.plan;
 
         with $section {
@@ -105,10 +112,19 @@ role Builder {
             $type = ::($class-name);
         }
 
-        self!construct($type, \(:$context, |%config));
+        my $o := self!construct($type, \(:$context, |%config));
+        $o does $_ for @roles;
+        $o;
     }
 
-    multi method build-from-plan(%config, :$section, :$type!, :$context!, :@include) {
+    multi method build-from-plan(
+        %config,            #= The configuration to build with
+        :$section,          #= Name of the section to lookup config keys in the plan
+        :$type!,            #= Type of object to instantiate
+        Context :$context!, #= The Context object, used to get the entire plan
+        :@include,          #= Additional directories to search for .pm6 files
+        :@roles,            #= Additional roles to apply to the constructed object
+    ) {
         my %plan = $context.plan;
 
         with $section {
@@ -120,7 +136,9 @@ role Builder {
             }
         }
 
-        self!construct($type, \(:$context, |%config));
+        my $o := self!construct($type, \(:$context, |%config));
+        $o does $_ for @roles;
+        $o;
     }
 }
 
@@ -153,48 +171,104 @@ role Filtered {
     }
 }
 
-class Queue {
+role Queue {
     has @.items;
+    has Bool $.done = False;
 
+    #| Add an item to the end of the queue.
     method enq($item) { push @!items, $item }
+
+    #| Pull the next item from the queue, if any.
     method deq() { shift @!items }
 
+    #| Has items ready to process.
     method ready() { ?@!items }
+
+    #| Has no items ready to process. Exactly the same as !$q.ready.
     method empty() { !$.ready }
 
-    method merge(Queue:U: @queues) {
-        class :: is Queue {
-            has @.queues;
+    #| Return the state of the done flag.
+    multi method done() returns Bool:D { $!done }
+
+    #| Set the done flag with True. Passing False is a no-op.
+    multi method done(Bool:D $done) { $!done ||= $done }
+
+    #| Return True when both empty and done.
+    multi method finished() { $.empty and $.done }
+
+    #| Return True when either ready or not yet done.
+    multi method running() { $.ready or not $.done }
+}
+
+class QueueHelper {
+    method _ { ... } # abstract, cannot instantiate
+
+    method merge(@queues) {
+        return Queue.new if @queues.elems == 0;
+        return @queues[0] if @queues.elems == 1;
+
+        class :: does Queue {
+            has Queue @.queues;
 
             method deq() {
-                return shift @!items if @!items;
-                for @!queues -> $q {
-                    return $q.deq if $q.ready;
+                my $item;
+                if @!items {
+                    $item = shift @!items;
                 }
+                else {
+                    for @!queues -> $q {
+                        if $q.ready {
+                            $item = $q.deq;
+                            last;
+                        }
+                    }
+                }
+
+                self.done([&&] @!queues».done);
+
+                $item;
             }
 
             method ready() {
-                ?@!items || [|] @queues.map({ .ready })
+                die if @!queues[0] === self;
+                ?@!items || [||] @!queues».ready
             }
-        }
+        }.new(queues => @queues);
+    }
+
+    method sort($queue, &sorter = &infix:<cmp>) {
+        class :: does Queue {
+            has $.inner;
+
+            method ready() {
+                if $!inner.done {
+                    push @!items, $!inner.deq while $!inner.ready;
+                    @!items .= sort(&sorter);
+                    self.done(True);
+                }
+
+                ?@!items
+            }
+        }.new(:inner($queue));
     }
 }
 
-role Emitter {
-    method emit($item) { ... }
-    method done() { ... }
-    method quit($x) { ... }
-}
+# role Emitter {
+#     method emit($item) { ... }
+#     method done() { ... }
+#     method quit($x) { ... }
+# }
 
 role QueueEmitter {
-    has Queue $!queue .= new;
+    has Queue $.outbox .= new;
 
-    method emit($item) { $!queue.enq($item) }
+    method emit($item) { $!outbox.enq($item) }
 
-    method done() { }
+    method before-done() { }
+    method done() { self.before-done; $!outbox.done(True) }
     method quit($x) { }
 
-    multi method Queue { $!queue }
+    multi method Queue { $!outbox }
 }
 
 role AsyncEmitter {
@@ -204,7 +278,8 @@ role AsyncEmitter {
         #note "{self.^name} $item<id>";
         $!feed.emit($item)
     }
-    method done() { $!feed.done }
+    method before-done() { }
+    method done() { self.before-done; $!feed.done }
     method quit($x) { $!feed.quit($x) }
     multi method Supply { $!feed.Supply }
 }
@@ -213,48 +288,43 @@ role Component { ...  }
 
 role Generator {
     also does Component;
-    also does Emitter;
+    #also does Emitter;
 
     method generate() { ... }
 }
 
 role Processor {
     also does Component;
-    also does Emitter;
+    #also does Emitter;
 
-    multi method join(@sources) { ... }
+    method prepare-producer($helper, @queues) {
+        $helper.merge(@queues);
+    }
+
     method process($item) { ... }
 }
 
 role QueueProcessor {
     also does QueueEmitter;
 
-    has $.queue;
-
-    method prepare-queue(@queues) {
-        Queue.merge(@queues);
-    }
+    has Queue $.inbox is rw;
 
     multi method join(@sources) {
         return unless @sources;
 
-        my Supply @queues = @sources.map({ .Queue });
-        $!queue = self.prepare-queue(@queues);
+        my @queues = @sources».Queue;
+        $!inbox = self.prepare-producer(QueueHelper, @queues);
     }
 }
 
-role SupplyProcessor {
-    also does SupplyEmitter;
-
-    method prepare-producer(@supplies) {
-        Supply.merge(@supplies)
-    }
+role AsyncProcessor {
+    also does AsyncEmitter;
 
     multi method join(@sources) {
         return unless @sources;
 
-        my Supply @supplies = @sources.map({ .Supply });
-        my $producer = self.prepare-producer(@supplies);
+        my Supply @supplies = @sources».Supply;
+        my $producer = self.prepare-producer(Supply, @supplies);
         $producer.tap(
             sub ($item) {
                 CATCH {
@@ -270,13 +340,14 @@ role SupplyProcessor {
             quit => { self.quit($_) },
         );
     }
-
-    method process($item) { ... }
 }
 
 class Context
 does Loggish
 does Builder {
+    has @.generator-roles;
+    has @.processor-roles;
+
     has %.plan;
     has %.generators;
     has %.processors;
@@ -300,7 +371,8 @@ does Builder {
             %.plan<processors>{ $name },
             :context(self),
             :type-prefix<App::Perlocution::Processor>,
-            :section<processors>
+            :section<processors>,
+            :roles(@!processor-roles),
         );
     }
 
@@ -312,13 +384,14 @@ does Builder {
             %.plan<generators>{ $name },
             :context(self),
             :type-prefix<App::Perlocution::Generator>,
-            :section<generators>
+            :section<generators>,
+            :roles(@!generator-roles),
         );
     }
 
     method source($name) {
         my ($type, $real-name) = $name.split(':', 2);
-        self.debug("Configuring %s %s", $type, $real-name);
+        # self.debug("Configuring %s %s", $type, $real-name);
         my $obj = do given $type {
             when 'generator' { self.generator($real-name) }
             when 'processor' { self.processor($real-name) }
@@ -328,27 +401,47 @@ does Builder {
         }
     }
 
-    method from-plan(::?CLASS:U: *%plan) {
-        my $self = self.new(:%plan);
-        $self.init;
+    method from-plan(::?CLASS:D: *%plan) {
+        self.plan = %plan;
+        self.init;
     }
 
     method init(::?CLASS:D:) {
-        for %!plan<flow>.kv -> $processor-name, $source-names {
-            my @source-names = |$source-names.list;
+        @!run = (%!plan<run> // %!generators.keys).map({
+            self.generator($^name);
+        });
+
+        my %order = %!plan<flow>.keys.BagHash;
+
+        my $last-score = [+] %order.values;
+        loop {
+            for %!plan<flow>.kv -> $processor-name, $source-names {
+                my @source-names = |$source-names.list;
+
+                my $score = [max] gather for @source-names -> $source-name {
+                    my ($type, $real-name) = $source-name.split(':', 2);
+                    if $type eq 'generator' { take 1 }
+                    else                    { take %order{ $real-name } + 1 }
+                }
+
+                %order{ $processor-name } = $score;
+            }
+
+            last if $last-score == [+] %order.values;
+            $last-score = [+] %order.values;
+        }
+
+        for %order.sort(*.value <=> *.value)».key -> $processor-name {
+            my @source-names = |%!plan<flow>{ $processor-name }.list;
             my $processor = self.processor($processor-name);
 
-            my Emitter @sources = @source-names.map(-> $name {
+            my @sources = @source-names.map(-> $name {
                 self.source($name);
             });
 
             self.debug("Joining %s <- %s", $processor-name, @source-names.join(", "));
             $processor.join(@sources);
         }
-
-        @!run = (%!plan<run> // %!generators.keys).map({
-            self.generator($^name);
-        });
 
         self;
     }
@@ -396,7 +489,28 @@ does Builder {
     }
 }
 
+# Memory intensive and slow, but no stoopid Perl 6 async boogs
 class QueueRunner {
+    method run($context) {
+        my @generators = $context.generators.values;
+        my @processors = $context.processors.values;
+
+        for @generators -> $g { $g.generate; $g.outbox.done(True) }
+
+        while (@processors) {
+            for @processors -> $p {
+                while $p.inbox.ready {
+                    my %item = $p.inbox.deq();
+                    $p.process(%item);
+                }
+
+                $p.outbox.done($p.inbox.finished);
+            }
+
+            # Keep only those that still might have stuff to process
+            @processors .= grep({ .inbox.running });
+        }
+    }
 }
 
 class AsyncRunner {
@@ -430,7 +544,11 @@ class Plan {
 
 multi load-plan(Str $plan-text) is export {
     my %plan = from-json($plan-text);
-    my $context = Context.from-plan(|%plan);
+    my $context = Context.new(
+        generator-roles => [ QueueEmitter ],
+        processor-roles => [ QueueProcessor ],
+    );
+    $context.from-plan(|%plan);
     Plan.new(:$context, :runner(QueueRunner.new));
 }
 
