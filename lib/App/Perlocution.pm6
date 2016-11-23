@@ -174,18 +174,28 @@ role Filtered {
 role Queue {
     has @.items;
     has Bool $.done = False;
+    has Int %!pointers{Int};
+
+    method !this-pointer($key) {
+        %!pointers{ $key } //= 0;
+    }
+
+    method !next-pointer($key) {
+        %!pointers{ $key } //= 0;
+        %!pointers{ $key }++;
+    }
 
     #| Add an item to the end of the queue.
     method enq($item) { push @!items, $item }
 
     #| Pull the next item from the queue, if any.
-    method deq() { shift @!items }
+    method deq($key) { @!items[ self!next-pointer($key) ] }
 
     #| Has items ready to process.
-    method ready() { ?@!items }
+    method ready($key) { self!this-pointer($key) < @!items }
 
     #| Has no items ready to process. Exactly the same as !$q.ready.
-    method empty() { !$.ready }
+    method empty($key) { !self.ready($key) }
 
     #| Return the state of the done flag.
     multi method done() returns Bool:D { $!done }
@@ -194,10 +204,10 @@ role Queue {
     multi method done(Bool:D $done) { $!done ||= $done }
 
     #| Return True when both empty and done.
-    multi method finished() { $.empty and $.done }
+    multi method finished($key) { self.empty($key) and $.done }
 
     #| Return True when either ready or not yet done.
-    multi method running() { $.ready or not $.done }
+    multi method running($key) { self.ready($key) or not $.done }
 }
 
 class QueueHelper {
@@ -210,15 +220,15 @@ class QueueHelper {
         class :: does Queue {
             has Queue @.queues;
 
-            method deq() {
+            method deq($key) {
                 my $item;
                 if @!items {
-                    $item = shift @!items;
+                    $item = self.Queue::deq($key);
                 }
                 else {
                     for @!queues -> $q {
-                        if $q.ready {
-                            $item = $q.deq;
+                        if $q.ready($key) {
+                            $item = $q.deq($key);
                             last;
                         }
                     }
@@ -229,9 +239,9 @@ class QueueHelper {
                 $item;
             }
 
-            method ready() {
+            method ready($key) {
                 die if @!queues[0] === self;
-                ?@!items || [||] @!queues».ready
+                self.Queue::ready($key) || [||] @!queues».ready($key)
             }
         }.new(queues => @queues);
     }
@@ -240,14 +250,14 @@ class QueueHelper {
         class :: does Queue {
             has $.inner;
 
-            method ready() {
+            method ready($key) {
                 if $!inner.done {
-                    push @!items, $!inner.deq while $!inner.ready;
+                    push @!items, $!inner.deq($key) while $!inner.ready($key);
                     @!items .= sort(&sorter);
                     self.done(True);
                 }
 
-                ?@!items
+                self.Queue::ready($key);
             }
         }.new(:inner($queue));
     }
@@ -264,8 +274,7 @@ role QueueEmitter {
 
     method emit($item) { $!outbox.enq($item) }
 
-    method before-done() { }
-    method done() { self.before-done; $!outbox.done(True) }
+    method done() { self.*before-done; $!outbox.done(True) }
     method quit($x) { }
 
     multi method Queue { $!outbox }
@@ -490,25 +499,30 @@ does Builder {
 }
 
 # Memory intensive and slow, but no stoopid Perl 6 async boogs
-class QueueRunner {
+class QueueRunner is Loggish {
     method run($context) {
-        my @generators = $context.generators.values;
-        my @processors = $context.processors.values;
+        my %generators = $context.generators;
+        my %processors = $context.processors;
 
-        for @generators -> $g { $g.generate; $g.outbox.done(True) }
+        for %generators.kv -> $name, $g {
+            self.info("Generating %s...", $name);
+            $g.generate;
+            $g.outbox.done(True);
+        }
 
-        while (@processors) {
-            for @processors -> $p {
-                while $p.inbox.ready {
-                    my %item = $p.inbox.deq();
+        while (%processors) {
+            for %processors.kv -> $name, $p {
+                while $p.inbox.ready($p.WHERE) {
+                    my %item = $p.inbox.deq($p.WHERE);
+                    #self.debug("Process %s: %s", $name, %item.perl);
                     $p.process(%item);
                 }
 
-                $p.outbox.done($p.inbox.finished);
+                $p.done if $p.inbox.finished($p.WHERE);
             }
 
             # Keep only those that still might have stuff to process
-            @processors .= grep({ .inbox.running });
+            %processors .= grep({ .value.inbox.running(.value.WHERE) });
         }
     }
 }

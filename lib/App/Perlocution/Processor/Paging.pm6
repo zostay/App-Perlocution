@@ -31,7 +31,7 @@ does App::Perlocution::Processor {
         );
     }
 
-    method before-done() {
+    multi method before-done() {
         self.emit($_) for @!previous-items;
     }
 

@@ -21,6 +21,16 @@ does App::Perlocution::Processor {
         return unless $content.defined;
 
         my $file = $.directory.child($filename);
+        my @need-dirs;
+        while $file.parent -> $this-dir {
+            last if $this-dir ~~ :d;
+            die "cannot create $filename because $this-dir is in the way"
+                if $this-dir ~~ :e;
+
+            push @need-dirs, $this-dir;
+        }
+        @need-dirs.reverse».mkdir;
+
         self.debug("Writing %s", $file);
 
         $file.spurt($content);
