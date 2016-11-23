@@ -22,12 +22,14 @@ does App::Perlocution::Processor {
 
         my $file = $.directory.child($filename);
         my @need-dirs;
-        while $file.parent -> $this-dir {
+        my $prev-dir = $file;
+        while $prev-dir.parent -> $this-dir {
             last if $this-dir ~~ :d;
             die "cannot create $filename because $this-dir is in the way"
                 if $this-dir ~~ :e;
 
             push @need-dirs, $this-dir;
+            $prev-dir = $this-dir;
         }
         @need-dirs.reverse».mkdir;
 
