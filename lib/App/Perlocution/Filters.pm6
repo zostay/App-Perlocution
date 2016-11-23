@@ -3,6 +3,12 @@ use v6;
 
 use Text::Markdown;
 
+our sub fc($v, :$context) { $v.fc }
+our sub tc($v, :$context) { $v.tc }
+our sub lc($v, :$context) { $v.lc }
+our sub uc($v, :$context) { $v.uc }
+our sub tclc($v, :$context) { $v.tclc }
+
 our sub split($v, :$context, :$by) { $v.split($by) }
 our sub map($v, :$context, :@filter) {
     my @v = |$v;
@@ -31,10 +37,10 @@ our sub clip-start($v, :$context, :$to) {
     }
 }
 
-our sub subst($v, :$match, :$replacement, :$global) {
+our sub subst($v, :$context, :$match, :$replacement, :$global) {
     $v.subst($match, $replacement, :$global);
 }
 
-our sub subst-re($v, :$match, :$replacement, :$global) {
+our sub subst-re($v, :$context, :$match, :$replacement, :$global) {
     $v.subst(/<{$match}>/, $replacement, :$global);
 }

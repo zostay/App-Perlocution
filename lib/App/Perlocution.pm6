@@ -159,7 +159,7 @@ role Filtered {
             )
         });
 
-        self.new(:@filter, |%plan);
+        self.new(|%plan, :@filter);
     }
 
     method apply-filter(::?CLASS:D: $v is copy) {
@@ -362,9 +362,14 @@ does Builder {
     has %.processors;
     has @.run;
     has %.filters =
+            :fc(&App::Perlocution::Filters::fc),
+            :tc(&App::Perlocution::Filters::tc),
+            :lc(&App::Perlocution::Filters::lc),
+            :uc(&App::Perlocution::Filters::uc),
+            :tclc(&App::Perlocution::Filters::tclc),
             :split(&App::Perlocution::Filters::split),
             :map(&App::Perlocution::Filters::map),
-            :trim(&App::Perlocution::Filters::trim),# :&markdown,
+            :trim(&App::Perlocution::Filters::trim),
             :clip-end(&App::Perlocution::Filters::clip-end),
             :clip-start(&App::Perlocution::Filters::clip-start),
             :subst(&App::Perlocution::Filters::subst),

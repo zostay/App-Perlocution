@@ -37,19 +37,23 @@ does App::Perlocution::Builder {
             }
         }
 
-        method from-plan(::?CLASS:U: :$name, :$template) {
-            self.new(
+        method from-plan(::?CLASS:U: :$context, :$name, :$template, *%plan) {
+            self.App::Perlocution::Filtered::from-plan(
+                :$context,
                 :$name,
                 :$template,
                 render => anti-template(&simple-process,
                     :source($template),
                     :format(SimpleFormat),
                 ),
+                |%plan,
             );
         }
 
         method template(%item) {
-            %item{ $.name } = &.render.(%item);
+            %item{ $.name } = self.apply-filter(
+                &.render.(%item)
+            );
         }
     }
 
@@ -69,6 +73,7 @@ does App::Perlocution::Builder {
             :@include,
             :%views is copy,
             :@path,
+            *%plan,
         ) {
             %views = %views.kv.map(-> $key, %view-config {
                 $key => self.build-from-plan(
@@ -85,11 +90,16 @@ does App::Perlocution::Builder {
             );
 
             my $anti = $template;
-            self.new(:$name, :$anti, :$library);
+            self.App::Perlocution::Filtered::from-plan(
+                :$context, :$name, :$anti, :$library,
+                |%plan,
+            );
         }
 
         method template(%item) {
-            %item{ $.name } = $.library.process($.anti, |%item);
+            %item{ $.name } = self.apply-filter(
+                $.library.process($.anti, |%item)
+            );
         }
     }
 
