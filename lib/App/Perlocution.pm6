@@ -263,11 +263,14 @@ class QueueHelper {
     }
 }
 
-# role Emitter {
-#     method emit($item) { ... }
-#     method done() { ... }
-#     method quit($x) { ... }
-# }
+class SupplyHelper {
+    method _ { ... } # abstract, cannot instantiate
+
+    method merge(@supplies) { Supply.merge(@supplies) }
+    method sort($supply, &sorter = &infix:<cmp>) {
+        $supply.sort(&sorter);
+    }
+}
 
 role QueueEmitter {
     has Queue $.outbox .= new;
@@ -297,14 +300,12 @@ role Component { ...  }
 
 role Generator {
     also does Component;
-    #also does Emitter;
 
     method generate() { ... }
 }
 
 role Processor {
     also does Component;
-    #also does Emitter;
 
     method prepare-producer($helper, @queues) {
         $helper.merge(@queues);
@@ -333,7 +334,7 @@ role AsyncProcessor {
         return unless @sources;
 
         my Supply @supplies = @sources».Supply;
-        my $producer = self.prepare-producer(Supply, @supplies);
+        my $producer = self.prepare-producer(SupplyHelper, @supplies);
         $producer.tap(
             sub ($item) {
                 CATCH {
@@ -510,6 +511,8 @@ class QueueRunner is Loggish {
         my %processors = $context.processors;
 
         for %generators.kv -> $name, $g {
+            next if $context.run && !$context.run{ $name };
+
             self.info("Generating %s...", $name);
             $g.generate;
             $g.outbox.done(True);
@@ -534,15 +537,18 @@ class QueueRunner is Loggish {
 
 class AsyncRunner {
     method promise-to-run($context) {
-        do for $context.run -> $generator {
+        my %generators = $context.generators;
+        do for %generators.kv -> $name, $g {
+            next if $context.run && !$context.run{ $name };
+
             start {
                 CATCH {
                     default {
-                        note "Failed during generation: $_";
+                        note "Failed during generation $name: $_";
                     }
                 }
 
-                $generator.generate;
+                $g.generate;
             }
         }
     }
@@ -561,22 +567,31 @@ class Plan {
     }
 }
 
-multi load-plan(Str $plan-text) is export {
+multi load-plan(Str $plan-text, Bool :$async = False) is export {
+    my ($runner, @generator-roles, @processor-roles);
+    if $async {
+        $runner = AsyncRunner.new;
+        @generator-roles = AsyncEmitter;
+        @processor-roles = AsyncProcessor;
+    }
+    else {
+        $runner = QueueRunner.new;
+        @generator-roles = QueueEmitter;
+        @processor-roles = QueueProcessor;
+    }
+
     my %plan = from-json($plan-text);
-    my $context = Context.new(
-        generator-roles => [ QueueEmitter ],
-        processor-roles => [ QueueProcessor ],
-    );
+    my $context = Context.new(:@generator-roles, :@processor-roles);
     $context.from-plan(|%plan);
-    Plan.new(:$context, :runner(QueueRunner.new));
+    Plan.new(:$context, :$runner);
 }
 
-multi load-plan(IO::Path $plan-file) is export {
-    load-plan($plan-file.slurp);
+multi load-plan(IO::Path $plan-file, :$async) is export {
+    load-plan($plan-file.slurp, :$async);
 }
 
-sub MAIN(Str :$plan-file = 'site.json') is export(:MAIN) {
-    my $plan = load-plan($plan-file.IO);
+sub MAIN(Str :$plan-file = 'site.json', Bool :a($async)) is export(:MAIN) {
+    my $plan = load-plan($plan-file.IO, :$async);
     my $logger = Logger.new;
     $logger.info("Plan loaded.");
     $plan.execute;
