@@ -72,6 +72,7 @@ role Builder {
 
     multi method build-from-plan(
         %config is copy,    #= The configuration to build with
+        :$component-name,   #= Set the name of the thing?
         :$section,          #= Name of the section to lookup config keys in the plan
         :$type-prefix!,     #= Prefix to put beofre the type name of the object
         Context :$context!, #= The Context object, used to get the entire plan
@@ -114,6 +115,7 @@ role Builder {
 
         my $o := self!construct($type, \(:$context, |%config));
         $o does $_ for @roles;
+        $o.component-name = $component-name with $component-name;
         $o;
     }
 
@@ -266,9 +268,12 @@ class QueueHelper {
 class SupplyHelper {
     method _ { ... } # abstract, cannot instantiate
 
-    method merge(@supplies) { Supply.merge(@supplies) }
+    method merge(@supplies) {
+        Supply.merge(@supplies».share)
+    }
+
     method sort($supply, &sorter = &infix:<cmp>) {
-        $supply.sort(&sorter);
+        $supply.share.sort(&sorter);
     }
 }
 
@@ -336,7 +341,7 @@ role AsyncProcessor {
         my Supply @supplies = @sources».Supply;
         my $producer = self.prepare-producer(SupplyHelper, @supplies);
         $producer.tap(
-            sub ($item) {
+            sub (%item) {
                 CATCH {
                     default {
                         warn "Failure in {self.^name}: $_";
@@ -344,7 +349,8 @@ role AsyncProcessor {
                     }
                 }
 
-                self.process($item);
+                #self.debug("Process %s: %s", $.component-name, %item.perl);
+                self.process(%item);
             },
             done => { self.done },
             quit => { self.quit($_) },
@@ -383,6 +389,7 @@ does Builder {
             unless %!plan<processors>{ $name }:exists;
 
         %.processors{ $name } //= self.build-from-plan(
+            :component-name($name),
             %.plan<processors>{ $name },
             :context(self),
             :type-prefix<App::Perlocution::Processor>,
@@ -396,6 +403,7 @@ does Builder {
             unless %!plan<generators>{ $name }:exists;
 
         %.generators{ $name } //= self.build-from-plan(
+            :component-name($name),
             %.plan<generators>{ $name },
             :context(self),
             :type-prefix<App::Perlocution::Generator>,
@@ -475,6 +483,8 @@ does Builder {
 role Component {
     also does Loggish;
 
+    has Str $.component-name is rw = '(unnamed)';
+
     method from-plan { ... }
 }
 
@@ -535,12 +545,13 @@ class QueueRunner is Loggish {
     }
 }
 
-class AsyncRunner {
+class AsyncRunner is Loggish {
     method promise-to-run($context) {
         my %generators = $context.generators;
         do for %generators.kv -> $name, $g {
             next if $context.run && !$context.run{ $name };
 
+            self.info("Generating %s...", $name);
             start {
                 CATCH {
                     default {
