@@ -1,44 +1,49 @@
 use v6;
 
 use Test;
-use App::Perlocution::Generator::FromList;
-use App::Perlocution::Processor::GroupBy;
+use App::Perlocution;
 
-my $context = App::Perlocution::Context.new;
-
-{
-    my $proc = App::Perlocution::Processor::GroupBy.from-plan(
-        items => 'items',
-        group-by => [
-            {
-                from => 'category',
-                name => 'category',
+subtest 'group by category', {
+    my $plan = load-plan({
+        generators => {
+            from-list => {
+                type => 'FromList',
+                items => [
+                    {
+                        name => 'one',
+                        category => 'foo',
+                    },
+                    {
+                        name => 'two',
+                        category => 'bar',
+                    },
+                    {
+                        name => 'three',
+                        category => 'foo',
+                    },
+                ],
             },
-        ],
-    );
-
-    my $gen = App::Perlocution::Generator::FromList.new(
-        items => [
-            {
-                name => 'one',
-                category => 'foo',
+        },
+        processors => {
+            group-by => {
+                type => 'GroupBy',
+                items => 'items',
+                group-by => [
+                    {
+                        from => 'category',
+                        name => 'category',
+                    },
+                ],
             },
-            {
-                name => 'two',
-                category => 'bar',
-            },
-            {
-                name => 'three',
-                category => 'foo',
-            },
-        ],
-    );
+        },
+        flow => {
+            group-by => [ 'generator:from-list' ],
+        },
+    });
 
-    $proc.join([ $gen ]);
-    my $items = $proc.Supply;
-    start { $gen.generate }
+    $plan.execute;
 
-    my @items = |$items.list;
+    my @items = |$plan.context.processor('group-by').Queue.list;
     is-deeply @items, [
         {
             category => 'foo',
@@ -65,43 +70,51 @@ my $context = App::Perlocution::Context.new;
     ], 'single field single item group by works';
 }
 
-{
-    my $proc = App::Perlocution::Processor::GroupBy.from-plan(
-        items => 'entries',
-        group-by => [
-            {
-                from => 'tags',
-                name => 'tag',
+subtest 'group by tags', {
+    my $plan = load-plan({
+        generators => {
+            from-list => {
+                type => 'FromList',
+                items => [
+                    {
+                        name => 'one',
+                        tags => [ 'foo', 'bar' ],
+                    },
+                    {
+                        name => 'two',
+                        tags => [ 'bar', 'baz' ],
+                    },
+                    {
+                        name => 'three',
+                        tags => [ 'foo' ],
+                    },
+                    {
+                        name => 'four',
+                        tags => [],
+                    },
+                ],
             },
-        ],
-    );
+        },
+        processors => {
+            group-by => {
+                type => 'GroupBy',
+                items => 'entries',
+                group-by => [
+                    {
+                        from => 'tags',
+                        name => 'tag',
+                    },
+                ],
+            },
+        },
+        flow => {
+            group-by => [ 'generator:from-list' ],
+        },
+    });
 
-    my $gen = App::Perlocution::Generator::FromList.new(
-        items => [
-            {
-                name => 'one',
-                tags => [ 'foo', 'bar' ],
-            },
-            {
-                name => 'two',
-                tags => [ 'bar', 'baz' ],
-            },
-            {
-                name => 'three',
-                tags => [ 'foo' ],
-            },
-            {
-                name => 'four',
-                tags => [],
-            },
-        ],
-    );
+    $plan.execute;
 
-    $proc.join([ $gen ]);
-    my $items = $proc.Supply;
-    start { $gen.generate }
-
-    my @items = |$items.list;
+    my @items = |$plan.context.processor('group-by').Queue.list;
     is-deeply @items, [
         {
             tag => 'foo',
@@ -141,37 +154,45 @@ my $context = App::Perlocution::Context.new;
     ], 'single field multi item group by works';
 }
 
-{
-    my $proc = App::Perlocution::Processor::GroupBy.from-plan(
-        items => 'things',
-    );
+subtest 'group by all', {
+    my $plan = load-plan({
+        generators => {
+            from-list => {
+                type => 'FromList',
+                items => [
+                    {
+                        name => 'one',
+                        tags => [ 'foo', 'bar' ],
+                    },
+                    {
+                        name => 'two',
+                        tags => [ 'bar', 'baz' ],
+                    },
+                    {
+                        name => 'three',
+                        tags => [ 'foo' ],
+                    },
+                    {
+                        name => 'four',
+                        tags => [],
+                    },
+                ],
+            },
+        },
+        processors => {
+            group-by => {
+                type => 'GroupBy',
+                items => 'things',
+            },
+        },
+        flow => {
+            group-by => [ 'generator:from-list' ],
+        },
+    });
 
-    my $gen = App::Perlocution::Generator::FromList.new(
-        items => [
-            {
-                name => 'one',
-                tags => [ 'foo', 'bar' ],
-            },
-            {
-                name => 'two',
-                tags => [ 'bar', 'baz' ],
-            },
-            {
-                name => 'three',
-                tags => [ 'foo' ],
-            },
-            {
-                name => 'four',
-                tags => [],
-            },
-        ],
-    );
+    $plan.execute;
 
-    $proc.join([ $gen ]);
-    my $items = $proc.Supply;
-    start { $gen.generate }
-
-    my @items = |$items.list;
+    my @items = |$plan.context.processor('group-by').Queue.list;
     is-deeply @items, [
         {
             things => [
@@ -196,51 +217,59 @@ my $context = App::Perlocution::Context.new;
     ], 'no field group by works';
 }
 
-{
-    my $proc = App::Perlocution::Processor::GroupBy.from-plan(
-        items => 'items',
-        group-by => [
-            {
-                name => 'category',
-                from => 'category',
+subtest 'group by multiple fields', {
+    my $plan = load-plan({
+        generators => {
+            from-list => {
+                type => 'FromList',
+                items => [
+                    {
+                        name => 'one',
+                        category => 'foo',
+                        tags => [ 'zizzle', 'zazzle' ],
+                    },
+                    {
+                        name => 'two',
+                        category => 'bar',
+                        tags => [ 'zazzle', 'nargle' ],
+                    },
+                    {
+                        name => 'three',
+                        category => 'foo',
+                        tags => [ 'zizzle' ],
+                    },
+                    {
+                        name => 'four',
+                        category => 'bar',
+                        tags => [],
+                    },
+                ],
             },
-            {
-                name => 'tag',
-                from => 'tags',
+        },
+        processors => {
+            group-by => {
+                type => 'GroupBy',
+                items => 'items',
+                group-by => [
+                    {
+                        name => 'category',
+                        from => 'category',
+                    },
+                    {
+                        name => 'tag',
+                        from => 'tags',
+                    },
+                ],
             },
-        ],
-    );
+        },
+        flow => {
+            group-by => [ 'generator:from-list' ],
+        },
+    });
 
-    my $gen = App::Perlocution::Generator::FromList.new(
-        items => [
-            {
-                name => 'one',
-                category => 'foo',
-                tags => [ 'zizzle', 'zazzle' ],
-            },
-            {
-                name => 'two',
-                category => 'bar',
-                tags => [ 'zazzle', 'nargle' ],
-            },
-            {
-                name => 'three',
-                category => 'foo',
-                tags => [ 'zizzle' ],
-            },
-            {
-                name => 'four',
-                category => 'bar',
-                tags => [],
-            },
-        ],
-    );
+    $plan.execute;
 
-    $proc.join([ $gen ]);
-    my $items = $proc.Supply;
-    start { $gen.generate }
-
-    my @items = |$items.list;
+    my @items = |$plan.context.processor('group-by').Queue.list;
     is-deeply @items, [
         {
             category => 'foo',

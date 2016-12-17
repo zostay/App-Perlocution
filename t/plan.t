@@ -35,7 +35,7 @@ END_OF_PLAN
 
 $plan.execute;
 
-my @things = |$plan.context.processor('modify-things').Supply.list;
+my @things = |$plan.context.processor('modify-things').Queue.list;
 is-deeply @things, [
     { id => 'a', value => 1 },
     { id => 'b', value => 1 },
