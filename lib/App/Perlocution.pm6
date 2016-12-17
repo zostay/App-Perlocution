@@ -211,7 +211,16 @@ role Queue {
     #| Return True when either ready or not yet done.
     multi method running($key) { self.ready($key) or not $.done }
 
-    method list() { @!items.list }
+    #| Return all items enqueued so far.
+    multi method list() { @!items.list }
+
+    #| Return all items unqueued so far that have not been dequeued by this key
+    #| yet. Marks the items as having been dequeued for the given key.
+    multi method list($key) {
+        my $ptr = self!this-pointer($key);
+        %!pointers{ $key } = @!items;
+        @!items[ $ptr .. @!items.end ];
+    }
 }
 
 class QueueHelper {
@@ -369,7 +378,7 @@ does Builder {
     has %.plan;
     has %.generators;
     has %.processors;
-    has @.run;
+    has %.run;
     has %.filters =
             :fc(&App::Perlocution::Filters::fc),
             :tc(&App::Perlocution::Filters::tc),
@@ -432,9 +441,8 @@ does Builder {
     }
 
     method init(::?CLASS:D:) {
-        @!run = (%!plan<run> // %!generators.keys).map({
-            self.generator($^name);
-        });
+        %!run = set(%!plan<run> // %!plan<generators>.keys);
+        self.generator($_) for %!run.keys;
 
         my %order = %!plan<flow>.keys.BagHash;
 
@@ -523,7 +531,7 @@ class QueueRunner is Loggish {
         my %processors = $context.processors;
 
         for %generators.kv -> $name, $g {
-            next if $context.run && !$context.run{ $name };
+            next unless $context.run ∋ $name;
 
             self.info("Generating %s...", $name);
             $g.generate;

@@ -1,34 +1,35 @@
 use v6;
 
 use Test;
-use App::Perlocution::Generator::SlurpFiles;
+use App::Perlocution;
 
-my $context = App::Perlocution::Context.new;
-
-my $gen = App::Perlocution::Generator::SlurpFiles.from-plan(
-    context => $context,
-    meta    => {
-        basename => {
-            name   => 'id',
-            filter => [
-                {
-                    function => 'clip-end',
-                    from     => '.',
+my $plan = load-plan({
+    generators => {
+        slurp-files => {
+            type => 'SlurpFiles',
+            meta  => {
+                basename => {
+                    name   => 'id',
+                    filter => [
+                        {
+                            function => 'clip-end',
+                            from     => '.',
+                        },
+                    ],
                 },
-            ],
-        },
-        slurp => {
-            name => 'content',
+                slurp => {
+                    name => 'content',
+                },
+            },
+            files => [ 't/files/*' ],
         },
     },
-    files => [ 't/files/*' ],
-);
+});
 
+$plan.execute;
+my @files = |$plan.context.generator('slurp-files')\
+    .Queue.list.sort(*.<id> cmp *.<id>);
 
-my $files = $gen.Supply.sort(*.<id> cmp *.<id>);
-start { $gen.generate }
-
-my @files = |$files.list;
 is-deeply @files, [
     {
         id => 'one',
