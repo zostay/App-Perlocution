@@ -210,6 +210,8 @@ role Queue {
 
     #| Return True when either ready or not yet done.
     multi method running($key) { self.ready($key) or not $.done }
+
+    method list() { @!items.list }
 }
 
 class QueueHelper {
@@ -578,7 +580,7 @@ class Plan {
     }
 }
 
-multi load-plan(Str $plan-text, Bool :$async = False) is export {
+multi load-plan(%plan, Bool :$async = False) is export {
     my ($runner, @generator-roles, @processor-roles);
     if $async {
         $runner = AsyncRunner.new;
@@ -591,13 +593,17 @@ multi load-plan(Str $plan-text, Bool :$async = False) is export {
         @processor-roles = QueueProcessor;
     }
 
-    my %plan = from-json($plan-text);
     my $context = Context.new(:@generator-roles, :@processor-roles);
     $context.from-plan(|%plan);
     Plan.new(:$context, :$runner);
 }
 
-multi load-plan(IO::Path $plan-file, :$async) is export {
+multi load-plan(Str $plan-text, Bool :$async = False) is export {
+    my %plan = from-json($plan-text);
+    load-plan(%plan, :$async);
+}
+
+multi load-plan(IO::Path $plan-file, :$async = False) is export {
     load-plan($plan-file.slurp, :$async);
 }
 

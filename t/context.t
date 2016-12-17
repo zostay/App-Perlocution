@@ -3,7 +3,7 @@ use v6;
 use Test;
 use App::Perlocution;
 
-my $context = App::Perlocution::Context.from-plan(
+my $plan = load-plan({
     generators => {
         some-things => {
             type => 'FromList',
@@ -29,11 +29,11 @@ my $context = App::Perlocution::Context.from-plan(
     flow => {
         modify-things => <generator:some-things>,
     },
-);
+});
 
-await $context.run;
+$plan.execute;
 
-my @things = |$context.processor('modify-things').Supply.list;
+my @things = |$plan.context.processor('modify-things').Queue.list;
 is-deeply @things, [
     { id => 'a', value => 1 },
     { id => 'b', value => 1 },
