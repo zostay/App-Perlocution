@@ -1,32 +1,92 @@
 use v6;
 
 use Test;
-use App::Perlocution::Generator::FromList;
-use App::Perlocution::Processor::Paging;
+use App::Perlocution;
 
-my $context = App::Perlocution::Context.new;
+my $plan = load-plan({
+    processors => {
+        paging-next-prev => {
+            type => 'Paging',
+            previous-name => 'prev',
+            next-name     => 'next',
+        },
+        paging-page-next-prev => {
+            type => 'Paging',
+            previous-name => 'prev',
+            next-name     => 'next',
+            page-name     => 'page',
+            page-limit    => 3,
+        },
+        paging-min-prevents-break => {
+            type => 'Paging',
+            previous-name => 'prev',
+            next-name     => 'next',
+            page-name     => 'page',
+            page-limit    => 3,
+            min-per-page  => 2,
+        },
+        paging-min-allows-break => {
+            type => 'Paging',
+            previous-name => 'prev',
+            next-name     => 'next',
+            page-name     => 'page',
+            page-limit    => 3,
+            min-per-page  => 2,
+        },
+    },
+    generators => {
+        short-input => {
+            type => 'FromList',
+            items => [
+                { :id<a> },
+                { :id<b> },
+                { :id<c> },
+
+                { :id<d> },
+            ],
+        },
+        medium-input => {
+            type => 'FromList',
+            items => [
+                { :id<a> },
+                { :id<b> },
+                { :id<c> },
+
+                { :id<d> },
+                { :id<e> },
+                { :id<f> },
+
+                { :id<g> },
+            ],
+        },
+        long-input => {
+            type => 'FromList',
+            items => [
+                { :id<a> },
+                { :id<b> },
+                { :id<c> },
+
+                { :id<d> },
+                { :id<e> },
+                { :id<f> },
+
+                { :id<g> },
+                { :id<h> },
+            ],
+        },
+    },
+    flow => {
+        paging-next-prev => [ 'generator:short-input' ],
+        paging-page-next-prev => [ 'generator:short-input' ],
+        paging-min-prevents-break => [ 'generator:medium-input' ],
+        paging-min-allows-break => [ 'generator:long-input' ],
+    },
+});
+
+$plan.execute;
 
 subtest 'next prev links are good' => {
-    my $proc = App::Perlocution::Processor::Paging.from-plan(
-        previous-name => 'prev',
-        next-name     => 'next',
-    );
-
-    my $gen = App::Perlocution::Generator::FromList.new(
-        items => [
-            { :id<a> },
-            { :id<b> },
-            { :id<c> },
-
-            { :id<d> },
-        ],
-    );
-
-    $proc.join([ $gen ]);
-    my $items = $proc.Supply;
-    start { $gen.generate }
-
-    my @items = |$items.list;
+    my @items = |$plan.context.processor('paging-next-prev').Queue.list;
 
     is @items[0]<id>, 'a', 'item a good';
     is @items[0]<next><id>, 'b', 'item a->next is good';
@@ -41,28 +101,7 @@ subtest 'next prev links are good' => {
 }
 
 subtest 'next prev links are good with paging' => {
-    my $proc = App::Perlocution::Processor::Paging.from-plan(
-        previous-name => 'prev',
-        next-name     => 'next',
-        page-name     => 'page',
-        page-limit    => 3,
-    );
-
-    my $gen = App::Perlocution::Generator::FromList.new(
-        items => [
-            { :id<a> },
-            { :id<b> },
-            { :id<c> },
-
-            { :id<d> },
-        ],
-    );
-
-    $proc.join([ $gen ]);
-    my $items = $proc.Supply;
-    start { $gen.generate }
-
-    my @items = |$items.list;
+    my @items = |$plan.context.processor('paging-page-next-prev').Queue.list;
 
     is @items[0]<id>, 'a', 'item a good';
     is @items[0]<page>, 1, 'item a page good';
@@ -81,33 +120,7 @@ subtest 'next prev links are good with paging' => {
 }
 
 subtest 'min-per-page prevents break' => {
-    my $proc = App::Perlocution::Processor::Paging.from-plan(
-        previous-name => 'prev',
-        next-name     => 'next',
-        page-name     => 'page',
-        page-limit    => 3,
-        min-per-page  => 2,
-    );
-
-    my $gen = App::Perlocution::Generator::FromList.new(
-        items => [
-            { :id<a> },
-            { :id<b> },
-            { :id<c> },
-
-            { :id<d> },
-            { :id<e> },
-            { :id<f> },
-
-            { :id<g> },
-        ],
-    );
-
-    $proc.join([ $gen ]);
-    my $items = $proc.Supply;
-    start { $gen.generate }
-
-    my @items = |$items.list;
+    my @items = |$plan.context.processor('paging-min-prevents-break').Queue.list;
 
     is @items[0]<page>, 1, 'a is 1';
     is @items[1]<page>, 1, 'b is 1';
@@ -119,34 +132,8 @@ subtest 'min-per-page prevents break' => {
 }
 
 subtest 'min-per-page allows break' => {
-    my $proc = App::Perlocution::Processor::Paging.from-plan(
-        previous-name => 'prev',
-        next-name     => 'next',
-        page-name     => 'page',
-        page-limit    => 3,
-        min-per-page  => 2,
-    );
+    my @items = |$plan.context.processor('paging-min-allows-break').Queue.list;
 
-    my $gen = App::Perlocution::Generator::FromList.new(
-        items => [
-            { :id<a> },
-            { :id<b> },
-            { :id<c> },
-
-            { :id<d> },
-            { :id<e> },
-            { :id<f> },
-
-            { :id<g> },
-            { :id<h> },
-        ],
-    );
-
-    $proc.join([ $gen ]);
-    my $items = $proc.Supply;
-    start { $gen.generate }
-
-    my @items = |$items.list;
     is @items[0]<page>, 1, 'a is 1';
     is @items[1]<page>, 1, 'b is 1';
     is @items[2]<page>, 1, 'c is 1';
