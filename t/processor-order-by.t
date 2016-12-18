@@ -1,29 +1,35 @@
 use v6;
 
 use Test;
-use App::Perlocution::Generator::FromList;
-use App::Perlocution::Processor::OrderBy;
+use App::Perlocution;
 
-my $context = App::Perlocution::Context.new;
+my $plan = load-plan({
+    processors => {
+        order-by => {
+            type => 'OrderBy',
+            order-by => [ 'id', '-name', 'title' ],
+        },
+    },
+    generators => {
+        input => {
+            type => 'FromList',
+            items => [
+                { id => 'b', name => 'a', title => 'c', value => 1 },
+                { id => 'a', name => 'b', title => 'a', value => 2 },
+                { id => 'b', name => 'c', title => 'c', value => 3 },
+                { id => 'b', name => 'a', title => 'd', value => 4 },
+            ],
+        },
+    },
+    flow => {
+        order-by => [ 'generator:input' ],
+    },
+});
 
-my $proc = App::Perlocution::Processor::OrderBy.from-plan(
-    order-by => [ 'id', '-name', 'title' ],
-);
+$plan.execute;
 
-my $gen = App::Perlocution::Generator::FromList.new(
-    items => [
-        { id => 'b', name => 'a', title => 'c', value => 1 },
-        { id => 'a', name => 'b', title => 'a', value => 2 },
-        { id => 'b', name => 'c', title => 'c', value => 3 },
-        { id => 'b', name => 'a', title => 'd', value => 4 },
-    ],
-);
+my @items = |$plan.context.processor('order-by').Queue.list;
 
-$proc.join([ $gen ]);
-my $items = $proc.Supply;
-start { $gen.generate }
-
-my @items = |$items.list;
 is-deeply @items, [
     { id => 'a', name => 'b', title => 'a', value => 2 },
     { id => 'b', name => 'c', title => 'c', value => 3 },
