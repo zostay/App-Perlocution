@@ -1,9 +1,9 @@
 use v6;
 
-use App::Perlocution;
+use Perlocution;
 
-class App::Perlocution::Processor::SpurtFiles
-does App::Perlocution::Processor {
+class Perlocution::Processor::SpurtFiles
+does Perlocution::Processor {
     has IO::Path $.directory;
     has Str $.filename-field;
     has Str $.spurt-field;

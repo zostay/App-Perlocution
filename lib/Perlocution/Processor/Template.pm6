@@ -1,11 +1,11 @@
 use v6;
 
-use App::Perlocution;
+use Perlocution;
 
-class App::Perlocution::Processor::Template
-does App::Perlocution::Processor
-does App::Perlocution::Builder {
-    class Simple does App::Perlocution::Filtered {
+class Perlocution::Processor::Template
+does Perlocution::Processor
+does Perlocution::Builder {
+    class Simple does Perlocution::Filtered {
         has Str $.name;
         has &.render;
 
@@ -38,7 +38,7 @@ does App::Perlocution::Builder {
         }
 
         method from-plan(::?CLASS:U: :$context, :$name, :$template, *%plan) {
-            self.App::Perlocution::Filtered::from-plan(
+            self.Perlocution::Filtered::from-plan(
                 :$context,
                 :$name,
                 :$template,
@@ -57,7 +57,7 @@ does App::Perlocution::Builder {
         }
     }
 
-    class Anti does App::Perlocution::Filtered {
+    class Anti does Perlocution::Filtered {
         use Template::Anti;
 
         has Str $.name;
@@ -90,7 +90,7 @@ does App::Perlocution::Builder {
             );
 
             my $anti = $template;
-            self.App::Perlocution::Filtered::from-plan(
+            self.Perlocution::Filtered::from-plan(
                 :$context, :$name, :$anti, :$library,
                 |%plan,
             );

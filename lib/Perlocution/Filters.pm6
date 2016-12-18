@@ -1,4 +1,4 @@
-unit module App::Perlocution::Filters;
+unit module Perlocution::Filters;
 use v6;
 
 use Text::Markdown;

@@ -1,10 +1,10 @@
 use v6;
 
-use App::Perlocution;
+use Perlocution;
 use JSON::Tiny;
 
-class App::Perlocution::Processor::JSON
-does App::Perlocution::Processor {
+class Perlocution::Processor::JSON
+does Perlocution::Processor {
     has $.name;
     has @.fields;
 

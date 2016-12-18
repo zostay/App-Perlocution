@@ -1,8 +1,8 @@
 use v6;
 
-use App::Perlocution;
+use Perlocution;
 
-class App::Perlocution::Processor::GroupBy does App::Perlocution::Processor {
+class Perlocution::Processor::GroupBy does Perlocution::Processor {
     has $.items;
     has @.group-by;
 

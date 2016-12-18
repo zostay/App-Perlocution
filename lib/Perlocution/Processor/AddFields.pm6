@@ -1,9 +1,9 @@
 use v6;
 
-use App::Perlocution;
+use Perlocution;
 
-class App::Perlocution::Processor::AddFields
-does App::Perlocution::Processor {
+class Perlocution::Processor::AddFields
+does Perlocution::Processor {
     has %.fields;
 
     method from-plan(::?CLASS:U: :%fields) {

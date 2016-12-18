@@ -1,9 +1,9 @@
 use v6;
 
-use App::Perlocution;
+use Perlocution;
 
-class App::Perlocution::Processor::Paging
-does App::Perlocution::Processor {
+class Perlocution::Processor::Paging
+does Perlocution::Processor {
     has Str $.previous-name;
     has Str $.next-name;
     has Str $.page-name;

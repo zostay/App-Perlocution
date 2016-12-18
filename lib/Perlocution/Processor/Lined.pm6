@@ -1,12 +1,12 @@
 use v6;
 
-use App::Perlocution;
+use Perlocution;
 
-class App::Perlocution::Processor::Lined
-does App::Perlocution::Processor
-does App::Perlocution::Builder {
+class Perlocution::Processor::Lined
+does Perlocution::Processor
+does Perlocution::Builder {
 
-    role Slurper does App::Perlocution::Filtered {
+    role Slurper does Perlocution::Filtered {
         has Str $.name;
 
         method slurp-up(@lines) { ... }
@@ -41,7 +41,7 @@ does App::Perlocution::Builder {
     }
 
     has Str $.slurp-field;
-    has App::Perlocution::Processor::Lined::Slurper @.slurpers;
+    has Perlocution::Processor::Lined::Slurper @.slurpers;
 
     method from-plan(::?CLASS:U: :$context, :@lines, :$slurp-field) {
         my @slurpers = gather for @lines -> %config {

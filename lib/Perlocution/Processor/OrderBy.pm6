@@ -1,9 +1,9 @@
 use v6;
 
-use App::Perlocution;
+use Perlocution;
 
-class App::Perlocution::Processor::OrderBy
-does App::Perlocution::Processor {
+class Perlocution::Processor::OrderBy
+does Perlocution::Processor {
     has @.order-by;
 
     method from-plan(::?CLASS:U: :@order-by) {

@@ -1,39 +1,39 @@
 {
    "meta6" : "0",
    "provides" : {
-       "App::Perlocution" : "lib/App/Perlocution.pm6",
-       "App::Perlocution::Builder" : "lib/App/Perlocution.pm6",
-       "App::Perlocution::Component" : "lib/App/Perlocution.pm6",
-       "App::Perlocution::Context" : "lib/App/Perlocution.pm6",
-       "App::Perlocution::Emitter" : "lib/App/Perlocution.pm6",
-       "App::Perlocution::Filter" : "lib/App/Perlocution.pm6",
-       "App::Perlocution::Filters" : "lib/App/Perlocution/Filters.pm6",
-       "App::Perlocution::Filtered" : "lib/App/Perlocution.pm6",
-       "App::Perlocution::Generator" : "lib/App/Perlocution.pm6",
-       "App::Perlocution::Generator::FromList" : "lib/App/Perlocution/Generator/FromList.pm6",
-       "App::Perlocution::Generator::SlurpFiles" : "lib/App/Perlocution/Generator/SlurpFiles.pm6",
-       "App::Perlocution::Plan" : "lib/App/Perlocution.pm6",
-       "App::Perlocution::Processor" : "lib/App/Perlocution.pm6",
-       "App::Perlocution::Processor::AddFields" : "lib/App/Perlocution/Processor/AddFields.pm6",
-       "App::Perlocution::Processor::GroupBy" : "lib/App/Perlocution/Processor/GroupBy.pm6",
-       "App::Perlocution::Processor::Lined" : "lib/App/Perlocution/Processor/Lined.pm6",
-       "App::Perlocution::Processor::OrderBy" : "lib/App/Perlocution/Processor/OrderBy.pm6",
-       "App::Perlocution::Processor::Paging" : "lib/App/Perlocution/Processor/Paging.pm6",
-       "App::Perlocution::Processor::SpurtFiles" : "lib/App/Perlocution/Processor/SpurtFiles.pm6",
-       "App::Perlocution::Processor::Template" : "lib/App/Perlocution/Processor/Template.pm6"
+       "Perlocution" : "lib/Perlocution.pm6",
+       "Perlocution::Builder" : "lib/Perlocution.pm6",
+       "Perlocution::Component" : "lib/Perlocution.pm6",
+       "Perlocution::Context" : "lib/Perlocution.pm6",
+       "Perlocution::Emitter" : "lib/Perlocution.pm6",
+       "Perlocution::Filter" : "lib/Perlocution.pm6",
+       "Perlocution::Filters" : "lib/Perlocution/Filters.pm6",
+       "Perlocution::Filtered" : "lib/Perlocution.pm6",
+       "Perlocution::Generator" : "lib/Perlocution.pm6",
+       "Perlocution::Generator::FromList" : "lib/Perlocution/Generator/FromList.pm6",
+       "Perlocution::Generator::SlurpFiles" : "lib/Perlocution/Generator/SlurpFiles.pm6",
+       "Perlocution::Plan" : "lib/Perlocution.pm6",
+       "Perlocution::Processor" : "lib/Perlocution.pm6",
+       "Perlocution::Processor::AddFields" : "lib/Perlocution/Processor/AddFields.pm6",
+       "Perlocution::Processor::GroupBy" : "lib/Perlocution/Processor/GroupBy.pm6",
+       "Perlocution::Processor::Lined" : "lib/Perlocution/Processor/Lined.pm6",
+       "Perlocution::Processor::OrderBy" : "lib/Perlocution/Processor/OrderBy.pm6",
+       "Perlocution::Processor::Paging" : "lib/Perlocution/Processor/Paging.pm6",
+       "Perlocution::Processor::SpurtFiles" : "lib/Perlocution/Processor/SpurtFiles.pm6",
+       "Perlocution::Processor::Template" : "lib/Perlocution/Processor/Template.pm6"
    },
    "test-depends" : [
       "Test", "Test::META"
    ],
    "support" : {
-      "source" : "git://github.com/zostay/App-Perlocution.git"
+      "source" : "git://github.com/zostay/Perlocution.git"
    },
    "perl" : "6.c",
    "build-depends" : [],
    "auth" : "github:zostay",
-   "source-url" : "git://github.com/zostay/App-Perlocution.git",
+   "source-url" : "git://github.com/zostay/Perlocution.git",
    "depends" : [],
-   "name" : "App::Perlocution",
+   "name" : "Perlocution",
    "authors" : [
       "Sterling Hanenkamp <hanenkamp@cpan.org>"
    ],

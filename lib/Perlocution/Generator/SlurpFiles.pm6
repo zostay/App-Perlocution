@@ -1,9 +1,9 @@
 use v6;
 
-use App::Perlocution;
+use Perlocution;
 
-class App::Perlocution::Generator::SlurpFiles
-does App::Perlocution::Generator {
+class Perlocution::Generator::SlurpFiles
+does Perlocution::Generator {
 
     use IO::Glob;
 
@@ -14,7 +14,7 @@ does App::Perlocution::Generator {
         my IO::Glob @globs = @files.map({ glob($_) });
 
         for %meta.kv -> $name, %p {
-            %p<filter> = App::Perlocution::Filtered.from-plan(
+            %p<filter> = Perlocution::Filtered.from-plan(
                 context => $context,
                 filter  => %p<filter> // [],
             );

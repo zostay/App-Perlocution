@@ -1,7 +1,7 @@
 use v6;
 
 use Test;
-use App::Perlocution;
+use Perlocution;
 use JSON::Tiny;
 
 my @input =

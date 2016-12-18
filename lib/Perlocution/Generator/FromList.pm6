@@ -1,9 +1,9 @@
 use v6;
 
-use App::Perlocution;
+use Perlocution;
 
-class App::Perlocution::Generator::FromList
-does App::Perlocution::Generator {
+class Perlocution::Generator::FromList
+does Perlocution::Generator {
     has @.items;
 
     method from-plan(::?CLASS:U: :@items) {

@@ -1,7 +1,7 @@
 use v6;
 
 use Test;
-use App::Perlocution;
+use Perlocution;
 
 subtest 'group by category', {
     my $plan = load-plan({

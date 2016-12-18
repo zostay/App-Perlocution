@@ -1,7 +1,7 @@
 use v6;
 
 use Test;
-use App::Perlocution;
+use Perlocution;
 
 
 my $rand-name = ('A'..'Z','a'..'z','0'..'9').flat.pick(10).join;

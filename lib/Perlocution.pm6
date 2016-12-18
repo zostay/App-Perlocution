@@ -1,10 +1,10 @@
-unit module App::Perlocution:ver<0.3>:auth<Sterling Hanenkamp (hanenkamp@cpan.org)>;
+unit module Perlocution:ver<0.3>:auth<Sterling Hanenkamp (hanenkamp@cpan.org)>;
 use v6;
 
 use CompUnit::DynamicLib;
 use JSON::Tiny;
 
-use App::Perlocution::Filters;
+use Perlocution::Filters;
 
 class LogConfig {
     our enum Level <Debug Info Warn Error>;
@@ -380,19 +380,19 @@ does Builder {
     has %.processors;
     has %.run;
     has %.filters =
-            :fc(&App::Perlocution::Filters::fc),
-            :tc(&App::Perlocution::Filters::tc),
-            :lc(&App::Perlocution::Filters::lc),
-            :uc(&App::Perlocution::Filters::uc),
-            :tclc(&App::Perlocution::Filters::tclc),
-            :split(&App::Perlocution::Filters::split),
-            :map(&App::Perlocution::Filters::map),
-            :trim(&App::Perlocution::Filters::trim),
-            :clip-end(&App::Perlocution::Filters::clip-end),
-            :clip-start(&App::Perlocution::Filters::clip-start),
-            :subst(&App::Perlocution::Filters::subst),
-            :subst-re(&App::Perlocution::Filters::subst-re),
-            :markdown(&App::Perlocution::Filters::markdown),
+            :fc(&Perlocution::Filters::fc),
+            :tc(&Perlocution::Filters::tc),
+            :lc(&Perlocution::Filters::lc),
+            :uc(&Perlocution::Filters::uc),
+            :tclc(&Perlocution::Filters::tclc),
+            :split(&Perlocution::Filters::split),
+            :map(&Perlocution::Filters::map),
+            :trim(&Perlocution::Filters::trim),
+            :clip-end(&Perlocution::Filters::clip-end),
+            :clip-start(&Perlocution::Filters::clip-start),
+            :subst(&Perlocution::Filters::subst),
+            :subst-re(&Perlocution::Filters::subst-re),
+            :markdown(&Perlocution::Filters::markdown),
         ;
 
     method processor($name) {
@@ -403,7 +403,7 @@ does Builder {
             :component-name($name),
             %.plan<processors>{ $name },
             :context(self),
-            :type-prefix<App::Perlocution::Processor>,
+            :type-prefix<Perlocution::Processor>,
             :section<processors>,
             :roles(@!processor-roles),
         );
@@ -417,7 +417,7 @@ does Builder {
             :component-name($name),
             %.plan<generators>{ $name },
             :context(self),
-            :type-prefix<App::Perlocution::Generator>,
+            :type-prefix<Perlocution::Generator>,
             :section<generators>,
             :roles(@!generator-roles),
         );

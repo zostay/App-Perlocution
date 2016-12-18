@@ -1,9 +1,9 @@
 use v6;
 
-use App::Perlocution;
+use Perlocution;
 
-class App::Perlocution::Processor::Filter
-does App::Perlocution::Processor {
+class Perlocution::Processor::Filter
+does Perlocution::Processor {
     has @.keep;
     has @.drop;
 

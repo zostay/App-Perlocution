@@ -1,7 +1,7 @@
 use v6;
 
 use Test;
-use App::Perlocution;
+use Perlocution;
 
 my $plan = load-plan(q:to/END_OF_PLAN/);
 {
