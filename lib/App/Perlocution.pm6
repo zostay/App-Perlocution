@@ -176,7 +176,7 @@ role Filtered {
 role Queue {
     has @.items;
     has Bool $.done = False;
-    has Int %!pointers{Int};
+    has Int %!pointers{ObjAt};
 
     method !this-pointer($key) {
         %!pointers{ $key } //= 0;
@@ -540,17 +540,17 @@ class QueueRunner is Loggish {
 
         while (%processors) {
             for %processors.kv -> $name, $p {
-                while $p.inbox.ready($p.WHERE) {
-                    my %item = $p.inbox.deq($p.WHERE);
-                    #self.debug("Process %s: %s", $name, %item.perl);
+                while $p.inbox.ready($p.WHICH) {
+                    my %item = $p.inbox.deq($p.WHICH);
+                    #self.debug("Process %s (%s): %s", $name, $p.WHICH, %item.perl);
                     $p.process(%item);
                 }
 
-                $p.done if $p.inbox.finished($p.WHERE);
+                $p.done if $p.inbox.finished($p.WHICH);
             }
 
             # Keep only those that still might have stuff to process
-            %processors .= grep({ .value.inbox.running(.value.WHERE) });
+            %processors .= grep({ .value.inbox.running(.value.WHICH) });
         }
     }
 }

@@ -15,7 +15,7 @@ does App::Perlocution::Processor {
     method process(%item is copy) {
         my %obj;
         if @!fields {
-            %obj{ @!fields } = %item{ @!fields };
+            %obj = %item{ @!fields }:kv;
         }
         else {
             %obj = %item;
