@@ -2,72 +2,75 @@ use v6;
 
 use Test;
 use App::Perlocution;
-use App::Perlocution::Generator::FromList;
-use App::Perlocution::Processor::Lined;
 
-my $context = App::Perlocution::Context.new;
-
-my $proc = App::Perlocution::Processor::Lined.from-plan(
-    context     => $context,
-    slurp-field => 'content',
-    lines       => [
-        {
-            name => 'title',
-            type => 'Single',
+my $plan = load-plan({
+    processors => {
+        lined => {
+            type => 'Lined',
+            slurp-field => 'content',
+            lines       => [
+                {
+                    name => 'title',
+                    type => 'Single',
+                },
+                {
+                    name => 'meta',
+                    type => 'Paragraph',
+                },
+                {
+                    name => 'body',
+                    type => 'Slurp',
+                },
+            ],
         },
-        {
-            name => 'meta',
-            type => 'Paragraph',
+    },
+    generators => {
+        input => {
+            type => 'FromList',
+            items => [
+                {
+                    content => q:to/END_OF_ONE/,
+                    One
+                    Author: Bob
+
+                    Blah Blah
+                    END_OF_ONE
+                },
+                {
+                    content => q:to/END_OF_TWO/,
+                    Two
+                    Author: Bob
+                    Date: Today
+
+                    Blah
+
+                    Blah
+
+                    Blah
+                    END_OF_TWO
+                },
+                {
+                    content => q:to/END_OF_THREE/,
+                    Three
+                    Author: Fred
+
+                    Blah Blah
+                    Blah
+
+                    Blah
+                    END_OF_THREE
+                },
+            ],
         },
-        {
-            name => 'body',
-            type => 'Slurp',
-        },
-    ],
-);
+    },
+    flow => {
+        lined => [ 'generator:input' ],
+    },
+});
 
-my $gen = App::Perlocution::Generator::FromList.new(
-    items => [
-        {
-            content => q:to/END_OF_ONE/,
-            One
-            Author: Bob
+$plan.execute;
 
-            Blah Blah
-            END_OF_ONE
-        },
-        {
-            content => q:to/END_OF_TWO/,
-            Two
-            Author: Bob
-            Date: Today
-
-            Blah
-
-            Blah
-
-            Blah
-            END_OF_TWO
-        },
-        {
-            content => q:to/END_OF_THREE/,
-            Three
-            Author: Fred
-
-            Blah Blah
-            Blah
-
-            Blah
-            END_OF_THREE
-        },
-    ],
-);
-
-$proc.join([ $gen ]);
-my $items = $proc.Supply;
-start { $gen.generate }
-
-my @items = |$items.list;
+my @items = |$plan.context.processor('lined').Queue.list;
 is-deeply @items, [
         {
             title => 'One',
