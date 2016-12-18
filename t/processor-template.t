@@ -1,62 +1,66 @@
 use v6;
 
 use Test;
-use App::Perlocution::Generator::FromList;
-use App::Perlocution::Processor::Template;
+use App::Perlocution;
 
-my $context = App::Perlocution::Context.new;
-
-my $proc = App::Perlocution::Processor::Template.from-plan(
-    context   => $context,
-    templates => [
-        {
-            name     => "output-content",
-            type     => "Anti",
-            template => "tests.main",
-            include  => [ "t/view/lib" ],
-            path     => [ "t/view/originals" ],
-            views    => {
-                tests => {
-                    type => "MyApp::Templates",
+my $plan = load-plan({
+    processors => {
+        template => {
+            type => 'Template',
+            templates => [
+                {
+                    name     => "output-content",
+                    type     => "Anti",
+                    template => "tests.main",
+                    include  => [ "t/view/lib" ],
+                    path     => [ "t/view/originals" ],
+                    views    => {
+                        tests => {
+                            type => "MyApp::Templates",
+                        },
+                    },
                 },
-            },
+                {
+                    name => "output-filename",
+                    type => "Simple",
+                    template => '$id.html',
+                },
+            ],
         },
-        {
-            name => "output-filename",
-            type => "Simple",
-            template => '$id.html',
+    },
+    generators => {
+        input => {
+            type => 'FromList',
+            items => [
+                {
+                    id => 'one',
+                    title => 'One',
+                    meta => 'Author: Bob',
+                    body => 'Blah Blah',
+                },
+                {
+                    id => 'two',
+                    title => 'Two',
+                    meta => "Author: Bob\nDate: Today",
+                    body => "Blah\n\nBlah\n\nBlah",
+                },
+                {
+                    id => 'three',
+                    title => 'Three',
+                    meta => "Author: Fred",
+                    body => "Blah Blah\nBlah\n\nBlah",
+                },
+            ],
         },
-    ],
-);
+    },
+    flow => {
+        template => [ 'generator:input' ],
+    },
+});
 
-my $gen = App::Perlocution::Generator::FromList.new(
-    items => [
-        {
-            id => 'one',
-            title => 'One',
-            meta => 'Author: Bob',
-            body => 'Blah Blah',
-        },
-        {
-            id => 'two',
-            title => 'Two',
-            meta => "Author: Bob\nDate: Today",
-            body => "Blah\n\nBlah\n\nBlah",
-        },
-        {
-            id => 'three',
-            title => 'Three',
-            meta => "Author: Fred",
-            body => "Blah Blah\nBlah\n\nBlah",
-        },
-    ],
-);
+$plan.execute;
 
-$proc.join([ $gen ]);
-my $items = $proc.Supply;
-start { $gen.generate }
-
-my @items = |$items.list;
+my @items = |$plan.context.processor('template').Queue.list;
 is-deeply @items, [
     {
         id => 'one',
