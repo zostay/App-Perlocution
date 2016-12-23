@@ -392,6 +392,7 @@ does Builder {
             :clip-start(&Perlocution::Filters::clip-start),
             :subst(&Perlocution::Filters::subst),
             :subst-re(&Perlocution::Filters::subst-re),
+            :to-int(&Perlocution::Filters::to-int),
             :markdown(&Perlocution::Filters::markdown),
         ;
 

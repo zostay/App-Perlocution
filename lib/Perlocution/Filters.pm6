@@ -44,3 +44,5 @@ our sub subst($v, :$context, :$match, :$replacement, :$global) {
 our sub subst-re($v, :$context, :$match, :$replacement, :$global) {
     $v.subst(/<{$match}>/, $replacement, :$global);
 }
+
+our sub to-int($v, :$context) { $v.Int }
