@@ -525,8 +525,28 @@ does Builder {
     }
 }
 
+class Stat {
+    has $.pre-phase = 0;
+    has $.main-phase = 0;
+    has $.post-phase = 0;
+    method total() { $!pre-phase + $!main-phase + $!post-phase }
+
+    method !time(&c) { with now { c(); now - $_ } }
+    method pre-time(&c)  { $!pre-phase  += self!time(&c) }
+    method main-time(&c) { $!main-phase += self!time(&c) }
+    method post-time(&c) { $!post-phase += self!time(&c) }
+}
+
+role WithStats {
+    has Stat %.generator-stats;
+    has Stat %.processor-stats;
+
+    method generator-stat($name) { %!generator-stats{ $name } //= Stat.new }
+    method processor-stat($name) { %!processor-stats{ $name } //= Stat.new }
+}
+
 # Memory intensive and slow, but no stoopid Perl 6 async boogs
-class QueueRunner is Loggish {
+class QueueRunner is Loggish does WithStats {
     method run($context) {
         my %generators = $context.generators;
         my %processors = $context.processors;
@@ -535,7 +555,9 @@ class QueueRunner is Loggish {
             next unless $context.run ∋ $name;
 
             self.info("Generating %s...", $name);
-            $g.generate;
+            self.generator-stat($name).main-time: {
+                $g.generate;
+            }
             $g.outbox.done(True);
         }
 
@@ -544,7 +566,9 @@ class QueueRunner is Loggish {
                 while $p.inbox.ready($p.WHICH) {
                     my %item = $p.inbox.deq($p.WHICH);
                     #self.debug("Process %s (%s): %s", $name, $p.WHICH, %item.perl);
-                    $p.process(%item);
+                    self.processor-stat($name).main-time: {
+                        $p.process(%item);
+                    }
                 }
 
                 $p.done if $p.inbox.finished($p.WHICH);
@@ -622,4 +646,20 @@ sub MAIN(Str :$plan-file = 'site.json', Bool :a($async)) is export(:MAIN) {
     $logger.info("Plan loaded.");
     $plan.execute;
     $logger.info("Fin.");
+
+    my $runner = $plan.runner;
+    if ($runner ~~ WithStats) {
+        my $kw = [max] (|$runner.generator-stats.keys, |$runner.processor-stats.keys)».chars;
+        my $tw = [max] (|$runner.generator-stats.values, |$runner.processor-stats.values).map({
+            .total.fmt("%0.2f").chars
+        });
+
+        for $runner.generator-stats.keys.sort -> $key {
+            printf " %-{$kw}s : %0.2f s\n", $key, $runner.generator-stat($key).total;
+        }
+        printf "%-{$kw}s %s\n", "-" x $kw + 2, "-" x $tw + 4;
+        for $runner.processor-stats.keys.sort -> $key {
+            printf " %-{$kw}s : %{$tw}.2f s\n", $key, $runner.processor-stat($key).total;
+        }
+    }
 }
